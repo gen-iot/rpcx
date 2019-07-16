@@ -1,9 +1,9 @@
 package rpcx
 
 import (
-	"gitee.com/Puietel/std"
-	"gitee.com/SuzhenProjects/liblpc"
-	"github.com/pkg/errors"
+	"errors"
+	"gitee.com/gen-iot/liblpc"
+	"gitee.com/gen-iot/std"
 	"log"
 	"reflect"
 	"sync"

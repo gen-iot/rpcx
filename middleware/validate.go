@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"gitee.com/Puietel/std"
-	"gitee.com/SuzhenProjects/libgen/rpcx"
+	"gitee.com/gen-iot/rpcx"
+	"gitee.com/gen-iot/std"
 	"log"
 )
 

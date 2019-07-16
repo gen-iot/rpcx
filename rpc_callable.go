@@ -1,8 +1,8 @@
 package rpcx
 
 import (
-	"gitee.com/Puietel/std"
-	"gitee.com/SuzhenProjects/liblpc"
+	"gitee.com/gen-iot/liblpc"
+	"gitee.com/gen-iot/std"
 	"io"
 	"log"
 	"time"

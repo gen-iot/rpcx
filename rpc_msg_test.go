@@ -2,7 +2,7 @@ package rpcx
 
 import (
 	"fmt"
-	"gitee.com/Puietel/std"
+	"gitee.com/gen-iot/std"
 	"testing"
 )
 
