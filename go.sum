@@ -4,6 +4,7 @@ gitee.com/gen-iot/std v0.0.0-20190716083944-472d0322725d h1:+MEe/gJz+Mgg/wVTpgkC
 gitee.com/gen-iot/std v0.0.0-20190716083944-472d0322725d/go.mod h1:PnZJNbakKIlPI90FKNbncdy4vK8Uf2UqbEa3Pf0Li04=
 gitee.com/gen-iot/std v1.0.1 h1:kOSPml7cfnFp8BHF0gmhWEbqw/GDlUddM1VQRprLzLU=
 gitee.com/gen-iot/std v1.0.1/go.mod h1:PnZJNbakKIlPI90FKNbncdy4vK8Uf2UqbEa3Pf0Li04=
+gitee.com/gen-iot/std v1.0.2/go.mod h1:PnZJNbakKIlPI90FKNbncdy4vK8Uf2UqbEa3Pf0Li04=
 github.com/go-playground/locales v0.12.1 h1:2FITxuFt/xuCNP1Acdhv62OzaCiviiE4kotfhkmOqEc=
 github.com/go-playground/locales v0.12.1/go.mod h1:IUMDtCfWo/w/mtMfIE/IG2K+Ey3ygWanZIBtBW0W2TM=
 github.com/go-playground/universal-translator v0.16.0 h1:X++omBR/4cE2MNg91AoC3rmGrCjJ8eAeUP/K/EKx4DM=
@@ -18,3 +19,5 @@ github.com/vmihailenco/msgpack v4.0.4+incompatible h1:dSLoQfGFAo3F6OoNhwUmLwVgaU
 github.com/vmihailenco/msgpack v4.0.4+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=
 gopkg.in/go-playground/validator.v9 v9.29.0 h1:5ofssLNYgAA/inWn6rTZ4juWpRJUwEnXc1LG2IeXwgQ=
 gopkg.in/go-playground/validator.v9 v9.29.0/go.mod h1:+c9/zcJMFNgbLvly1L1V+PpxWdVbfP1avr/N00E2vyQ=
+gopkg.in/go-playground/validator.v9 v9.29.1 h1:SvGtYmN60a5CVKTOzMSyfzWDeZRxRuGvRQyEAKbw1xc=
+gopkg.in/go-playground/validator.v9 v9.29.1/go.mod h1:+c9/zcJMFNgbLvly1L1V+PpxWdVbfP1avr/N00E2vyQ=
