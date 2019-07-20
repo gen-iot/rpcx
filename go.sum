@@ -4,6 +4,7 @@ gitee.com/gen-iot/std v0.0.0-20190716083944-472d0322725d h1:+MEe/gJz+Mgg/wVTpgkC
 gitee.com/gen-iot/std v0.0.0-20190716083944-472d0322725d/go.mod h1:PnZJNbakKIlPI90FKNbncdy4vK8Uf2UqbEa3Pf0Li04=
 gitee.com/gen-iot/std v1.0.1 h1:kOSPml7cfnFp8BHF0gmhWEbqw/GDlUddM1VQRprLzLU=
 gitee.com/gen-iot/std v1.0.1/go.mod h1:PnZJNbakKIlPI90FKNbncdy4vK8Uf2UqbEa3Pf0Li04=
+gitee.com/gen-iot/std v1.0.2 h1:1M8aM9RUmichItjK1+OEM4TTg0KEGNNy/uVsv4HnsmA=
 gitee.com/gen-iot/std v1.0.2/go.mod h1:PnZJNbakKIlPI90FKNbncdy4vK8Uf2UqbEa3Pf0Li04=
 github.com/go-playground/locales v0.12.1 h1:2FITxuFt/xuCNP1Acdhv62OzaCiviiE4kotfhkmOqEc=
 github.com/go-playground/locales v0.12.1/go.mod h1:IUMDtCfWo/w/mtMfIE/IG2K+Ey3ygWanZIBtBW0W2TM=
