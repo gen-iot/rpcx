@@ -77,7 +77,7 @@ func (this *RPC) RegFuncWithName(fname string, f interface{}, m ...MiddlewareFun
 	fvType := fv.Type()
 	//check in/out param
 	checkInParam(fvType)
-	checkOutParam(fvType)
+	outType := checkOutParam(fvType)
 	//
 	this.lock.Lock()
 	defer this.lock.Unlock()
@@ -87,6 +87,7 @@ func (this *RPC) RegFuncWithName(fname string, f interface{}, m ...MiddlewareFun
 		fun:       fv,
 		inP0Type:  fvType.In(1),
 		outP0Type: fvType.Out(0),
+		outType:   outType,
 	}
 	fn.mid.Use(m...)
 	fn.handleF = fn.mid.buildChain(fn.invoke)

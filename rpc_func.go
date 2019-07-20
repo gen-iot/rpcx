@@ -11,6 +11,7 @@ type rpcFunc struct {
 	fun       reflect.Value
 	inP0Type  reflect.Type
 	outP0Type reflect.Type
+	outType   returnType
 	mid       middleware
 	handleF   HandleFunc
 }
@@ -56,6 +57,9 @@ func (this *rpcFunc) invoke(c Context) {
 		ctx.SetError(errInParamNil)
 		return
 	}
+	// todo 检查参数,有可能没有传入参数.
+	// 如:用户可能会如此调用 err:=call.Call(ctx)
+	// 检查入参是否存在
 	paramV := []reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(inParam)}
 	retV := this.fun.Call(paramV)
 	if !retV[1].IsNil() {

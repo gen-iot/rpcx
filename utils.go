@@ -21,11 +21,29 @@ func checkInParam(t reflect.Type) {
 	std.Assert(in1Kind == reflect.Ptr || in1Kind == reflect.Struct, "param[1] must be prt of struct")
 }
 
-func checkOutParam(t reflect.Type) {
+type returnType int
+
+const (
+	kResponseAndErr returnType = iota
+	kErrOnly
+)
+
+func checkOutParam(t reflect.Type) returnType {
 	outNum := t.NumOut()
-	std.Assert(outNum == 2, "func musts have two out_param")
-	out1 := t.Out(1)
-	std.Assert(out1 == typeOfError, "last param of out_param ,type must be `error`")
+	rtType := returnType(-1)
+	switch outNum {
+	case 1:
+		out1 := t.Out(0)
+		std.Assert(out1 == typeOfError, "first param of out_param ,type must be `error`")
+		rtType = kErrOnly
+	case 2:
+		out1 := t.Out(1)
+		std.Assert(out1 == typeOfError, "last param of out_param ,type must be `error`")
+		rtType = kResponseAndErr
+	default:
+		std.Assert(false, "illegal func return type num")
+	}
+	return rtType
 }
 
 func getFuncName(fv reflect.Value) string {
