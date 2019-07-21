@@ -6,21 +6,38 @@ import (
 	"reflect"
 )
 
+type funcDesc uint8
+
+const (
+	reqHasData funcDesc = 0x01
+	rspHasData funcDesc = 0x02
+)
+
 type rpcFunc struct {
-	name      string
-	fun       reflect.Value
-	inP0Type  reflect.Type
-	outP0Type reflect.Type
-	outType   returnType
-	mid       middleware
-	handleF   HandleFunc
+	name           string
+	fun            reflect.Value
+	inParamType    reflect.Type
+	outParamType   reflect.Type
+	mid            middleware
+	handleFunc     HandleFunc
+	handleFuncDesc funcDesc
 }
 
 func (this *rpcFunc) decodeInParam(data []byte) (interface{}, error) {
-	elementType := this.inP0Type
+	// check reqHasData
+	if this.handleFuncDesc&reqHasData != 0 {
+		if len(data) == 0 {
+			// request in is nil
+			return nil, nil
+		}
+	} else {
+		// request in doesn't exist
+		return nil, nil
+	}
+	elementType := this.inParamType
 	isPtr := false
-	if this.inP0Type.Kind() == reflect.Ptr {
-		elementType = this.inP0Type.Elem()
+	if this.inParamType.Kind() == reflect.Ptr {
+		elementType = this.inParamType.Elem()
 		isPtr = true
 	}
 	newOut := reflect.New(elementType).Interface()
