@@ -11,39 +11,50 @@ import (
 var typeOfError = reflect.TypeOf((*error)(nil)).Elem()
 var typeOfContext = reflect.TypeOf((*Context)(nil)).Elem()
 
-func checkInParam(t reflect.Type) {
+func checkInParam(t reflect.Type) (reflect.Type, funcDesc) {
+	fnInDesc := funcDesc(0)
 	inNum := t.NumIn()
-	std.Assert(inNum == 2, "func in1 param len != 1")
+	var inParamType reflect.Type = nil
+	std.Assert(inNum > 0 && inNum <= 2, "inNum len must less or equal than 2")
+	//
 	in0 := t.In(0)
-	std.Assert(in0 == typeOfContext, "param[0] must be rpcx.Context")
-	in1 := t.In(1)
-	in1Kind := in1.Kind()
-	std.Assert(in1Kind == reflect.Ptr || in1Kind == reflect.Struct, "param[1] must be prt of struct")
+	std.Assert(in0 == typeOfContext, "first in param must be rpcx.Context")
+	//
+	switch inNum {
+	case 1:
+		// func foo(context)
+		fnInDesc = 0
+	case 2:
+		// func foo(context,param1)
+		fnInDesc = reqHasData
+		in1 := t.In(1)
+		inParamType = in1
+		in1Kind := in1.Kind()
+		std.Assert(in1Kind == reflect.Ptr || in1Kind == reflect.Struct, "param[1] must be prt of struct")
+	default:
+		std.Assert(false, "illegal func in params num")
+	}
+	return inParamType, fnInDesc
 }
 
-type returnType int
-
-const (
-	kResponseAndErr returnType = iota
-	kErrOnly
-)
-
-func checkOutParam(t reflect.Type) returnType {
+func checkOutParam(t reflect.Type) (reflect.Type, funcDesc) {
 	outNum := t.NumOut()
-	rtType := returnType(-1)
+	fnOutDesc := funcDesc(0)
+	var outParamType reflect.Type = nil
 	switch outNum {
 	case 1:
 		out1 := t.Out(0)
 		std.Assert(out1 == typeOfError, "first param of out_param ,type must be `error`")
-		rtType = kErrOnly
 	case 2:
+		fnOutDesc = rspHasData
+		outParamType = t.Out(0)
 		out1 := t.Out(1)
 		std.Assert(out1 == typeOfError, "last param of out_param ,type must be `error`")
-		rtType = kResponseAndErr
+		fnOutDesc = 0
 	default:
-		std.Assert(false, "illegal func return type num")
+		std.Assert(false, "illegal func return params num")
 	}
-	return rtType
+	return outParamType, fnOutDesc
 }
 
 func getFuncName(fv reflect.Value) string {
@@ -57,13 +68,6 @@ func getFuncName(fv reflect.Value) string {
 		fname = fname[:idx]
 	}
 	return fname
-}
-
-func getValueElement(v reflect.Value) reflect.Value {
-	if v.Kind() == reflect.Ptr {
-		return v.Elem()
-	}
-	return v
 }
 
 type sigGuard struct {
