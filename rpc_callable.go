@@ -17,13 +17,14 @@ type Callable interface {
 
 	Start()
 
-	Call1(timeout time.Duration, name string, param interface{}, out interface{}) error
-	Call2(timeout time.Duration, name string, out interface{}) error
-	Call3(timeout time.Duration, name string) error
+	Call1(timeout time.Duration, name string, in interface{}) error
+	Call2(timeout time.Duration, name string, headers map[string]string, in interface{}) error
 
-	Call4(timeout time.Duration, name string, headers map[string]string, param interface{}, out interface{}) error
-	Call5(timeout time.Duration, name string, headers map[string]string, out interface{}) error
-	Call6(timeout time.Duration, name string, headers map[string]string) error
+	Call3(timeout time.Duration, name string, out interface{}) error
+	Call4(timeout time.Duration, name string, headers map[string]string, out interface{}) error
+
+	Call5(timeout time.Duration, name string, in, out interface{}) error
+	Call6(timeout time.Duration, name string, headers map[string]string, in, out interface{}) error
 
 	Perform(timeout time.Duration, ctx Context)
 
@@ -40,19 +41,27 @@ type rpcCallImpl struct {
 	liblpc.BaseUserData
 }
 
-func (this *rpcCallImpl) Call1(timeout time.Duration, name string, param interface{}, out interface{}) error {
-	return this.Call4(timeout, name, nil, param, out)
+func (this *rpcCallImpl) Call1(timeout time.Duration, name string, in interface{}) error {
+	return this.Call6(timeout, name, nil, in, nil)
 }
 
-func (this *rpcCallImpl) Call2(timeout time.Duration, name string, out interface{}) error {
-	return this.Call5(timeout, name, nil, out)
+func (this *rpcCallImpl) Call3(timeout time.Duration, name string, out interface{}) error {
+	return this.Call6(timeout, name, nil, nil, out)
 }
 
-func (this *rpcCallImpl) Call3(timeout time.Duration, name string) error {
-	return this.Call6(timeout, name, nil)
+func (this *rpcCallImpl) Call5(timeout time.Duration, name string, in, out interface{}) error {
+	return this.Call6(timeout, name, nil, in, out)
 }
 
-func (this *rpcCallImpl) Call4(timeout time.Duration, name string, headers map[string]string, param interface{}, out interface{}) error {
+func (this *rpcCallImpl) Call2(timeout time.Duration, name string, headers map[string]string, out interface{}) error {
+	return this.Call6(timeout, name, headers, nil, out)
+}
+
+func (this *rpcCallImpl) Call4(timeout time.Duration, name string, headers map[string]string, out interface{}) error {
+	return this.Call6(timeout, name, headers, nil, out)
+}
+
+func (this *rpcCallImpl) Call6(timeout time.Duration, name string, headers map[string]string, in, out interface{}) error {
 	std.Assert(this.stream != nil, "stream is nil!")
 	msgId := std.GenRandomUUID()
 	msg := &rpcRawMsg{
@@ -68,19 +77,11 @@ func (this *rpcCallImpl) Call4(timeout time.Duration, name string, headers map[s
 		this.rpc.releaseCtx(ctx)
 	}()
 	ctx.init(this, msg)
-	ctx.SetRequest(param)
+	ctx.SetRequest(in)
 	f := this.buildInvoke(timeout, ctx, out)
 	h := this.buildChain(f)
 	h(ctx)
 	return ctx.Error()
-}
-
-func (this *rpcCallImpl) Call5(timeout time.Duration, name string, headers map[string]string, out interface{}) error {
-	return this.Call4(timeout, name, headers, nil, out)
-}
-
-func (this *rpcCallImpl) Call6(timeout time.Duration, name string, headers map[string]string) error {
-	return this.Call4(timeout, name, headers, nil, nil)
 }
 
 func (this *rpcCallImpl) Start() {
