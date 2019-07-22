@@ -6,20 +6,37 @@ import (
 	"reflect"
 )
 
+type funcDesc uint8
+
+const (
+	reqHasData funcDesc = 0x01
+	rspHasData funcDesc = 0x02
+)
+
 type rpcFunc struct {
-	name      string
-	fun       reflect.Value
-	inP0Type  reflect.Type
-	outP0Type reflect.Type
-	mid       middleware
-	handleF   HandleFunc
+	name           string
+	fun            reflect.Value
+	inParamType    reflect.Type
+	outParamType   reflect.Type
+	mid            middleware
+	handleFunc     HandleFunc
+	handleFuncDesc funcDesc
 }
 
 func (this *rpcFunc) decodeInParam(data []byte) (interface{}, error) {
-	elementType := this.inP0Type
+	// fastpath
+	if this.handleFuncDesc&reqHasData == 0 {
+		// request in is nil
+		return nil, nil
+	}
+	// check reqHasData
+	if len(data) == 0 {
+		return reflect.Zero(this.inParamType).Interface(), nil
+	}
+	elementType := this.inParamType
 	isPtr := false
-	if this.inP0Type.Kind() == reflect.Ptr {
-		elementType = this.inP0Type.Elem()
+	if this.inParamType.Kind() == reflect.Ptr {
+		elementType = this.inParamType.Elem()
 		isPtr = true
 	}
 	newOut := reflect.New(elementType).Interface()
@@ -44,6 +61,10 @@ func (this *rpcFunc) invoke(c Context) {
 		if panicErr == nil {
 			return
 		}
+
+		if Debug {
+			panic(panicErr)
+		}
 		log.Println("call error ", panicErr)
 		ctx.SetError(errInvokeErr)
 	}()
@@ -51,18 +72,34 @@ func (this *rpcFunc) invoke(c Context) {
 	if err != nil {
 		return
 	}
-	inParam := ctx.Request()
-	if inParam == nil {
-		ctx.SetError(errInParamNil)
-		return
+	var outParam interface{} = nil
+	var paramV []reflect.Value = nil
+	if this.handleFuncDesc&reqHasData != 0 {
+		inParam := ctx.Request()
+		if inParam == nil {
+			ctx.SetError(errInParamNil)
+			return
+		}
+		paramV = []reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(inParam)}
+	} else {
+		paramV = []reflect.Value{reflect.ValueOf(ctx)}
 	}
-	paramV := []reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(inParam)}
 	retV := this.fun.Call(paramV)
-	if !retV[1].IsNil() {
-		err = retV[1].Interface().(error)
+	rspErrIdx := -1
+	rspDataIdx := -1
+	if this.handleFuncDesc&rspHasData != 0 {
+		rspErrIdx = 1
+		rspDataIdx = 0
+	} else {
+		rspErrIdx = 0
+	}
+	if !retV[rspErrIdx].IsNil() { // check error
+		err = retV[rspErrIdx].Interface().(error)
 		ctx.SetError(err)
 		return
 	}
-	outParam := retV[0].Interface()
-	ctx.SetResponse(outParam)
+	if rspDataIdx != -1 {
+		outParam = retV[rspDataIdx].Interface()
+		ctx.SetResponse(outParam)
+	}
 }

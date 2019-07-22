@@ -10,6 +10,9 @@ import (
 	"sync/atomic"
 )
 
+//noinspection GoUnusedGlobalVariable
+var Debug = true
+
 type RPC struct {
 	ioLoop       *liblpc.IOEvtLoop
 	rcpFuncMap   map[string]*rpcFunc
@@ -76,20 +79,21 @@ func (this *RPC) RegFuncWithName(fname string, f interface{}, m ...MiddlewareFun
 	std.Assert(fv.Kind() == reflect.Func, "f not func!")
 	fvType := fv.Type()
 	//check in/out param
-	checkInParam(fvType)
-	checkOutParam(fvType)
+	inParamType, inParamDesc := checkInParam(fvType)
+	outParamType, outParamDesc := checkOutParam(fvType)
 	//
 	this.lock.Lock()
 	defer this.lock.Unlock()
 	//
 	fn := &rpcFunc{
-		name:      fname,
-		fun:       fv,
-		inP0Type:  fvType.In(1),
-		outP0Type: fvType.Out(0),
+		name:           fname,
+		fun:            fv,
+		inParamType:    inParamType,
+		outParamType:   outParamType,
+		handleFuncDesc: inParamDesc | outParamDesc,
 	}
 	fn.mid.Use(m...)
-	fn.handleF = fn.mid.buildChain(fn.invoke)
+	fn.handleFunc = fn.mid.buildChain(fn.invoke)
 	this.rcpFuncMap[fname] = fn
 }
 
@@ -244,7 +248,7 @@ func (this *RPC) execHandler(c Context) {
 		} else {
 			ctx.SetRequest(inParam)
 		}
-		fnProxy = fn.handleF
+		fnProxy = fn.handleFunc
 	} else {
 		fnProxy = emptyHandlerFunc
 		ctx.SetError(errRpcFuncNotFound)
@@ -265,7 +269,8 @@ func (this *RPC) handleReq(sw liblpc.StreamWriter, inMsg *rpcRawMsg) {
 	//
 	proxy := this.buildChain(this.execHandler)
 	if this.preUseMiddleware.Len() != 0 {
-		proxy = this.preUseMiddleware.buildChain(this.execHandler)
+		// fix https://gitee.com/gen-iot/rpcx/issues/IZHK1
+		proxy = this.preUseMiddleware.buildChain(proxy)
 	}
 	proxy(ctx)
 	//
