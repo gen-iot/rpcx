@@ -29,8 +29,6 @@ func checkInParam(t reflect.Type) (reflect.Type, funcDesc) {
 		fnInDesc = reqHasData
 		in1 := t.In(1)
 		inParamType = in1
-		in1Kind := in1.Kind()
-		std.Assert(in1Kind == reflect.Ptr || in1Kind == reflect.Struct, "param[1] must be prt of struct")
 	default:
 		std.Assert(false, "illegal func in params num")
 	}
@@ -50,7 +48,6 @@ func checkOutParam(t reflect.Type) (reflect.Type, funcDesc) {
 		outParamType = t.Out(0)
 		out1 := t.Out(1)
 		std.Assert(out1 == typeOfError, "last param of out_param ,type must be `error`")
-		fnOutDesc = 0
 	default:
 		std.Assert(false, "illegal func return params num")
 	}

@@ -24,15 +24,14 @@ type rpcFunc struct {
 }
 
 func (this *rpcFunc) decodeInParam(data []byte) (interface{}, error) {
-	// check reqHasData
-	if this.handleFuncDesc&reqHasData != 0 {
-		if len(data) == 0 {
-			// request in is nil
-			return nil, nil
-		}
-	} else {
-		// request in doesn't exist
+	// fastpath
+	if this.handleFuncDesc&reqHasData == 0 {
+		// request in is nil
 		return nil, nil
+	}
+	// check reqHasData
+	if len(data) == 0 {
+		return reflect.Zero(this.inParamType).Interface(), nil
 	}
 	elementType := this.inParamType
 	isPtr := false
@@ -62,6 +61,10 @@ func (this *rpcFunc) invoke(c Context) {
 		if panicErr == nil {
 			return
 		}
+
+		if Debug {
+			panic(panicErr)
+		}
 		log.Println("call error ", panicErr)
 		ctx.SetError(errInvokeErr)
 	}()
@@ -69,21 +72,34 @@ func (this *rpcFunc) invoke(c Context) {
 	if err != nil {
 		return
 	}
-	inParam := ctx.Request()
-	if inParam == nil {
-		ctx.SetError(errInParamNil)
-		return
+	var outParam interface{} = nil
+	var paramV []reflect.Value = nil
+	if this.handleFuncDesc&reqHasData != 0 {
+		inParam := ctx.Request()
+		if inParam == nil {
+			ctx.SetError(errInParamNil)
+			return
+		}
+		paramV = []reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(inParam)}
+	} else {
+		paramV = []reflect.Value{reflect.ValueOf(ctx)}
 	}
-	// todo 检查参数,有可能没有传入参数.
-	// 如:用户可能会如此调用 err:=call.Call(ctx)
-	// 检查入参是否存在
-	paramV := []reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(inParam)}
 	retV := this.fun.Call(paramV)
-	if !retV[1].IsNil() {
-		err = retV[1].Interface().(error)
+	rspErrIdx := -1
+	rspDataIdx := -1
+	if this.handleFuncDesc&rspHasData != 0 {
+		rspErrIdx = 1
+		rspDataIdx = 0
+	} else {
+		rspErrIdx = 0
+	}
+	if !retV[rspErrIdx].IsNil() { // check error
+		err = retV[rspErrIdx].Interface().(error)
 		ctx.SetError(err)
 		return
 	}
-	outParam := retV[0].Interface()
-	ctx.SetResponse(outParam)
+	if rspDataIdx != -1 {
+		outParam = retV[rspDataIdx].Interface()
+		ctx.SetResponse(outParam)
+	}
 }

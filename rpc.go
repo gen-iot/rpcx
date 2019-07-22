@@ -10,6 +10,9 @@ import (
 	"sync/atomic"
 )
 
+//noinspection GoUnusedGlobalVariable
+var Debug = true
+
 type RPC struct {
 	ioLoop       *liblpc.IOEvtLoop
 	rcpFuncMap   map[string]*rpcFunc
