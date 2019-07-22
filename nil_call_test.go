@@ -50,7 +50,7 @@ func TestCall(t *testing.T) {
 		<-callable.ReadySignal()
 		fmt.Println("conn callable ready!")
 		out := new(string)
-		err = callable.Call2(time.Second*5, rpcFnName, out)
+		err = callable.Call3(time.Second*5, rpcFnName, out)
 		fmt.Println("call err :", err)
 		<-callable.CloseSignal()
 		fmt.Println("conn callable closed")
