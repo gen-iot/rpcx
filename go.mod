@@ -1,10 +1,10 @@
-module gitee.com/gen-iot/rpcx
+module github.com/gen-iot/rpcx
 
 go 1.12
 
 require (
-	gitee.com/gen-iot/liblpc v1.0.1
-	gitee.com/gen-iot/std v1.0.2
+	github.com/gen-iot/liblpc v1.0.1
+	github.com/gen-iot/std v1.0.2
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/stretchr/testify v1.3.0 // indirect
 	google.golang.org/appengine v1.6.1 // indirect

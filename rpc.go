@@ -2,8 +2,8 @@ package rpcx
 
 import (
 	"errors"
-	"gitee.com/gen-iot/liblpc"
-	"gitee.com/gen-iot/std"
+	"github.com/gen-iot/liblpc"
+	"github.com/gen-iot/std"
 	"log"
 	"reflect"
 	"sync"
@@ -269,7 +269,7 @@ func (this *RPC) handleReq(sw liblpc.StreamWriter, inMsg *rpcRawMsg) {
 	//
 	proxy := this.buildChain(this.execHandler)
 	if this.preUseMiddleware.Len() != 0 {
-		// fix https://gitee.com/gen-iot/rpcx/issues/IZHK1
+		// fix https://github.com/gen-iot/rpcx/issues/IZHK1
 		proxy = this.preUseMiddleware.buildChain(proxy)
 	}
 	proxy(ctx)

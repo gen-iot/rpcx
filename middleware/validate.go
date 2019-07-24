@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"gitee.com/gen-iot/rpcx"
-	"gitee.com/gen-iot/std"
+	"github.com/gen-iot/rpcx"
+	"github.com/gen-iot/std"
 	"log"
 )
 

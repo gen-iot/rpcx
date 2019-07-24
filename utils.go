@@ -1,7 +1,7 @@
 package rpcx
 
 import (
-	"gitee.com/gen-iot/std"
+	"github.com/gen-iot/std"
 	"reflect"
 	"runtime"
 	"strings"

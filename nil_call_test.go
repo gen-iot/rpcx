@@ -2,8 +2,8 @@ package rpcx
 
 import (
 	"fmt"
-	"gitee.com/gen-iot/liblpc"
-	"gitee.com/gen-iot/std"
+	"github.com/gen-iot/liblpc"
+	"github.com/gen-iot/std"
 	"sync"
 	"testing"
 	"time"

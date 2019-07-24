@@ -1,6 +1,6 @@
 package rpcx
 
-import "gitee.com/gen-iot/std"
+import "github.com/gen-iot/std"
 
 type HandleFunc = func(ctx Context)
 

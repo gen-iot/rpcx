@@ -2,7 +2,7 @@ package rpcx
 
 import (
 	"errors"
-	"gitee.com/gen-iot/std"
+	"github.com/gen-iot/std"
 	"log"
 )
 

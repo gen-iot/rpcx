@@ -3,7 +3,7 @@ package middleware
 import (
 	"errors"
 	"fmt"
-	"gitee.com/gen-iot/rpcx"
+	"github.com/gen-iot/rpcx"
 	"log"
 	"runtime"
 )

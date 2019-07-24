@@ -2,7 +2,7 @@ package rpcx
 
 import (
 	"fmt"
-	"gitee.com/gen-iot/std"
+	"github.com/gen-iot/std"
 	"testing"
 )
 
