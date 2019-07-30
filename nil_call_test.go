@@ -18,7 +18,11 @@ type sumRsp struct {
 	Sum int
 }
 
-func sumFn(_ Context, req sumReq) (string, error) {
+func sumFn(ctx Context, req sumReq) (string, error) {
+	header := ctx.RequestHeader()
+	for k, v := range header {
+		fmt.Println("key=", k, ", value=", v)
+	}
 	return "hello world", nil
 }
 
@@ -49,8 +53,11 @@ func TestCall(t *testing.T) {
 		callable.Start()
 		<-callable.ReadySignal()
 		fmt.Println("conn callable ready!")
-		out := new(string)
-		err = callable.Call3(time.Second*5, rpcFnName, out)
+		//out := new(string)
+		err = callable.Call0(time.Second*5, rpcFnName, map[string]string{
+			"k1":    "k2",
+			"hello": "world",
+		})
 		fmt.Println("call err :", err)
 		<-callable.CloseSignal()
 		fmt.Println("conn callable closed")

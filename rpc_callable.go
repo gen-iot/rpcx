@@ -17,6 +17,9 @@ type Callable interface {
 
 	Start()
 
+	Call(timeout time.Duration, name string) error
+	Call0(timeout time.Duration, name string, headers map[string]string) error
+
 	Call1(timeout time.Duration, name string, in interface{}) error
 	Call2(timeout time.Duration, name string, headers map[string]string, in interface{}) error
 
@@ -41,24 +44,32 @@ type rpcCallImpl struct {
 	liblpc.BaseUserData
 }
 
+func (this *rpcCallImpl) Call(timeout time.Duration, name string) error {
+	return this.Call6(timeout, name, nil, nil, nil)
+}
+
+func (this *rpcCallImpl) Call0(timeout time.Duration, name string, headers map[string]string) error {
+	return this.Call6(timeout, name, headers, nil, nil)
+}
+
 func (this *rpcCallImpl) Call1(timeout time.Duration, name string, in interface{}) error {
 	return this.Call6(timeout, name, nil, in, nil)
+}
+
+func (this *rpcCallImpl) Call2(timeout time.Duration, name string, headers map[string]string, in interface{}) error {
+	return this.Call6(timeout, name, headers, in, nil)
 }
 
 func (this *rpcCallImpl) Call3(timeout time.Duration, name string, out interface{}) error {
 	return this.Call6(timeout, name, nil, nil, out)
 }
 
-func (this *rpcCallImpl) Call5(timeout time.Duration, name string, in, out interface{}) error {
-	return this.Call6(timeout, name, nil, in, out)
-}
-
-func (this *rpcCallImpl) Call2(timeout time.Duration, name string, headers map[string]string, out interface{}) error {
-	return this.Call6(timeout, name, headers, nil, out)
-}
-
 func (this *rpcCallImpl) Call4(timeout time.Duration, name string, headers map[string]string, out interface{}) error {
 	return this.Call6(timeout, name, headers, nil, out)
+}
+
+func (this *rpcCallImpl) Call5(timeout time.Duration, name string, in, out interface{}) error {
+	return this.Call6(timeout, name, nil, in, out)
 }
 
 func (this *rpcCallImpl) Call6(timeout time.Duration, name string, headers map[string]string, in, out interface{}) error {
