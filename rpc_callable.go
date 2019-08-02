@@ -117,11 +117,16 @@ func (this *rpcCallImpl) invoke(timeout time.Duration, out interface{}, ctx *con
 	if out == nil {
 		return
 	}
-	outValue := reflect.ValueOf(out)
-	std.Assert(outValue.Kind() == reflect.Ptr, "out must be a pointer")
-	if outValue.IsNil() {
+	if len(ctx.ackMsg.Data) == 0 {
+		log.Printf("call :callee response data is empty, but caller has out param type:(%T)\n", out)
+		ctx.SetResponse(out)
 		return
 	}
+	// checking
+	outValue := reflect.ValueOf(out)
+	// check pointer
+	std.Assert(outValue.Kind() == reflect.Ptr, "out must be a pointer")
+	std.Assert(!outValue.IsNil(), "out underlying ptr must not be nil")
 	err := std.MsgpackUnmarshal(ctx.ackMsg.Data, out)
 	if err != nil {
 		log.Println("call :MsgpackUnmarshal got err ->", err)
