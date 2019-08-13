@@ -93,7 +93,7 @@ func (this *RPC) RegFuncWithName(fname string, f interface{}, m ...MiddlewareFun
 		handleFuncDesc: inParamDesc | outParamDesc,
 	}
 	fn.mid.Use(m...)
-	fn.handleFunc = fn.mid.buildChain(fn.invoke)
+	fn.handleFunc = fn.mid.buildChain(fn.____invoke)
 	this.rcpFuncMap[fname] = fn
 }
 

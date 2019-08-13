@@ -53,7 +53,8 @@ func (this *rpcFunc) decodeInParam(data []byte) (interface{}, error) {
 var errInvokeErr = errors.New("invoke failed")
 var errInParamNil = errors.New("inParam is nil")
 
-func (this *rpcFunc) invoke(c Context) {
+// dont call this func directly
+func (this *rpcFunc) ____invoke(c Context) {
 	ctx := c.(*contextImpl)
 	defer func() {
 		//
