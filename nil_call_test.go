@@ -30,6 +30,13 @@ func TestCall(t *testing.T) {
 	rpc, err := New()
 	std.AssertError(err, "rpc new")
 	rpcFnName := "Sum"
+	rpc.Use(func(next HandleFunc) HandleFunc {
+		return func(ctx Context) {
+			fmt.Println("tag1")
+			next(ctx)
+			fmt.Println("tag2")
+		}
+	})
 	rpc.RegFuncWithName(rpcFnName, sumFn)
 	rpc.Start()
 	addr := "127.0.0.1:8848"

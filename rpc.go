@@ -234,10 +234,7 @@ func (this *RPC) lastWriteFn(outMsg *rpcRawMsg, ctx Context) {
 	}
 }
 
-func emptyHandlerFunc(_ Context) {
-}
-
-func (this *RPC) execHandler(c Context) {
+func (this *RPC) execWithMiddleware(c Context) {
 	ctx := c.(*contextImpl)
 	fn := this.getFunc(ctx.reqMsg.MethodName)
 	var fnProxy HandleFunc = nil
@@ -245,13 +242,14 @@ func (this *RPC) execHandler(c Context) {
 		inParam, err := fn.decodeInParam(ctx.reqMsg.Data)
 		if err != nil {
 			ctx.SetError(err)
+			return
 		} else {
 			ctx.SetRequest(inParam)
 		}
 		fnProxy = fn.handleFunc
 	} else {
-		fnProxy = emptyHandlerFunc
 		ctx.SetError(errRpcFuncNotFound)
+		return
 	}
 	//
 	fnProxy = this.buildChain(fnProxy)
@@ -267,7 +265,7 @@ func (this *RPC) handleReq(sw liblpc.StreamWriter, inMsg *rpcRawMsg) {
 	}()
 	ctx.init(cli, inMsg)
 	//
-	proxy := this.buildChain(this.execHandler)
+	proxy := this.execWithMiddleware
 	if this.preUseMiddleware.Len() != 0 {
 		// fix https://github.com/gen-iot/rpcx/issues/IZHK1
 		proxy = this.preUseMiddleware.buildChain(proxy)
