@@ -13,14 +13,16 @@ type Context interface {
 	SetMethod(string)
 	Method() string
 
-	RequestHeader() map[string]string
+	LocalFuncDesc() FuncDesc
+
 	SetRequestHeader(map[string]string)
+	RequestHeader() map[string]string
 
 	SetRequest(in interface{})
 	Request() interface{}
 
-	ResponseHeader() map[string]string
 	SetResponseHeader(map[string]string)
+	ResponseHeader() map[string]string
 
 	SetResponse(out interface{})
 	Response() interface{}
@@ -32,12 +34,13 @@ type Context interface {
 }
 
 type contextImpl struct {
-	call   Callable
-	in     interface{}
-	out    interface{}
-	err    error
-	reqMsg *rpcRawMsg
-	ackMsg *rpcRawMsg
+	call        Callable
+	in          interface{}
+	out         interface{}
+	err         error
+	reqMsg      *rpcRawMsg
+	ackMsg      *rpcRawMsg
+	localFnDesc FuncDesc
 	liblpc.BaseUserData
 }
 
@@ -48,6 +51,7 @@ func (this *contextImpl) reset() {
 	this.err = nil
 	this.reqMsg = nil
 	this.ackMsg = nil
+	this.localFnDesc = 0
 	this.SetUserData(nil)
 }
 
@@ -116,6 +120,10 @@ func (this *contextImpl) Callable() Callable {
 	return this.call
 }
 
+func (this *contextImpl) LocalFuncDesc() FuncDesc {
+	return this.localFnDesc
+}
+
 func (this *contextImpl) buildOutMsg() *rpcRawMsg {
 	this.ackMsg = &rpcRawMsg{
 		Id:         this.Id(),
@@ -137,4 +145,5 @@ func (this *contextImpl) buildOutMsg() *rpcRawMsg {
 func (this *contextImpl) init(call Callable, inMsg *rpcRawMsg) {
 	this.call = call
 	this.reqMsg = inMsg
+	this.localFnDesc = 0
 }

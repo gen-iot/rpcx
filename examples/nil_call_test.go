@@ -1,8 +1,10 @@
-package rpcx
+package examples
 
 import (
 	"fmt"
 	"github.com/gen-iot/liblpc"
+	"github.com/gen-iot/rpcx"
+	"github.com/gen-iot/rpcx/middleware"
 	"github.com/gen-iot/std"
 	"sync"
 	"testing"
@@ -18,7 +20,7 @@ type sumRsp struct {
 	Sum int
 }
 
-func sumFn(ctx Context, req sumReq) error {
+func sumFn(ctx rpcx.Context) error {
 	header := ctx.RequestHeader()
 	for k, v := range header {
 		fmt.Println("key=", k, ", value=", v)
@@ -27,16 +29,16 @@ func sumFn(ctx Context, req sumReq) error {
 }
 
 func TestCall(t *testing.T) {
-	rpc, err := New()
+	rpc, err := rpcx.New()
 	std.AssertError(err, "rpc new")
-	rpcFnName := "Sum"
-	rpc.Use(func(next HandleFunc) HandleFunc {
-		return func(ctx Context) {
+	const rpcFnName = "Sum"
+	rpc.Use(func(next rpcx.HandleFunc) rpcx.HandleFunc {
+		return func(ctx rpcx.Context) {
 			fmt.Println("tag1")
 			next(ctx)
 			fmt.Println("tag2")
 		}
-	})
+	}, middleware.Validate(std.NewValidator(std.LANG_EN)))
 	rpc.RegFuncWithName(rpcFnName, sumFn)
 	rpc.Start()
 	addr := "127.0.0.1:8848"
@@ -56,7 +58,7 @@ func TestCall(t *testing.T) {
 		std.AssertError(err, "resolve addr err")
 		call, err := rpc.NewClientCallable(sockAddr, nil)
 		std.AssertError(err, "new client callable")
-		callable := NewSignalCallable(call)
+		callable := rpcx.NewSignalCallable(call)
 		callable.Start()
 		<-callable.ReadySignal()
 		fmt.Println("conn callable ready!")

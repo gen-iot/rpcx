@@ -247,6 +247,7 @@ func (this *RPC) execWithMiddleware(c Context) {
 			ctx.SetRequest(inParam)
 		}
 		fnProxy = fn.handleFunc
+		ctx.localFnDesc = fn.handleFuncDesc
 	} else {
 		ctx.SetError(errRpcFuncNotFound)
 		return

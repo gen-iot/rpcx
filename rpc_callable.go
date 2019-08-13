@@ -88,6 +88,17 @@ func (this *rpcCallImpl) Call6(timeout time.Duration, name string, headers map[s
 		this.rpc.releaseCtx(ctx)
 	}()
 	ctx.init(this, msg)
+	if in != nil {
+		ctx.localFnDesc |= ReqHasData
+	}
+	if out != nil {
+		// checking
+		outValue := reflect.ValueOf(out)
+		// check pointer
+		std.Assert(outValue.Kind() == reflect.Ptr, "out must be a pointer")
+		std.Assert(!outValue.IsNil(), "out underlying ptr must not be nil")
+		ctx.localFnDesc |= RspHasData
+	}
 	ctx.SetRequest(in)
 	f := this.buildInvoke(timeout, ctx, out)
 	h := this.buildChain(f)
@@ -105,11 +116,12 @@ func (this *rpcCallImpl) Close() error {
 
 func (this *rpcCallImpl) buildInvoke(timeout time.Duration, ctx *contextImpl, out interface{}) HandleFunc {
 	return func(Context) {
-		this.invoke(timeout, out, ctx)
+		this.____invoke(timeout, out, ctx)
 	}
 }
 
-func (this *rpcCallImpl) invoke(timeout time.Duration, out interface{}, ctx *contextImpl) {
+// dont call this func directly
+func (this *rpcCallImpl) ____invoke(timeout time.Duration, out interface{}, ctx *contextImpl) {
 	this.Perform(timeout, ctx)
 	if ctx.Error() != nil || /*never happen*/ ctx.ackMsg /*never happen*/ == nil {
 		return
@@ -122,12 +134,7 @@ func (this *rpcCallImpl) invoke(timeout time.Duration, out interface{}, ctx *con
 		ctx.SetResponse(out)
 		return
 	}
-	// checking
-	outValue := reflect.ValueOf(out)
-	// check pointer
-	std.Assert(outValue.Kind() == reflect.Ptr, "out must be a pointer")
-	std.Assert(!outValue.IsNil(), "out underlying ptr must not be nil")
-	err := std.MsgpackUnmarshal(ctx.ackMsg.Data, out)
+	err := gRpcSerialization.UnMarshal(ctx.ackMsg.Data, out)
 	if err != nil {
 		log.Println("call :MsgpackUnmarshal got err ->", err)
 		ctx.SetError(err)
@@ -162,6 +169,7 @@ func (this *rpcCallImpl) Perform(timeout time.Duration, c Context) {
 		ctx.SetError(err)
 		return
 	}
+	std.Assert(ackMsgObj != nil, "ackMsg must not be nil")
 	ackMsg, ok := ackMsgObj.(*rpcRawMsg)
 	std.Assert(ok, "type mismatched ,rpcRawMsg")
 	ctx.ackMsg = ackMsg
