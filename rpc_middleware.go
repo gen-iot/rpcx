@@ -6,6 +6,7 @@ type HandleFunc = func(ctx Context)
 
 type MiddlewareFunc = func(next HandleFunc) HandleFunc
 
+//noinspection SpellCheckingInspection
 type middleware struct {
 	midwares []MiddlewareFunc
 }
