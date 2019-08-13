@@ -6,11 +6,11 @@ import (
 	"reflect"
 )
 
-type funcDesc uint8
+type FuncDesc uint8
 
 const (
-	reqHasData funcDesc = 0x01
-	rspHasData funcDesc = 0x02
+	ReqHasData FuncDesc = 0x01
+	RspHasData FuncDesc = 0x02
 )
 
 type rpcFunc struct {
@@ -20,12 +20,12 @@ type rpcFunc struct {
 	outParamType   reflect.Type
 	mid            middleware
 	handleFunc     HandleFunc
-	handleFuncDesc funcDesc
+	handleFuncDesc FuncDesc
 }
 
 func (this *rpcFunc) decodeInParam(data []byte) (interface{}, error) {
 	// fastpath
-	if this.handleFuncDesc&reqHasData == 0 {
+	if this.handleFuncDesc&ReqHasData == 0 {
 		// request in is nil
 		return nil, nil
 	}
@@ -75,7 +75,7 @@ func (this *rpcFunc) ____invoke(c Context) {
 	}
 	var outParam interface{} = nil
 	var paramV []reflect.Value = nil
-	if this.handleFuncDesc&reqHasData != 0 {
+	if this.handleFuncDesc&ReqHasData != 0 {
 		inParam := ctx.Request()
 		if inParam == nil {
 			ctx.SetError(errInParamNil)
@@ -88,7 +88,7 @@ func (this *rpcFunc) ____invoke(c Context) {
 	retV := this.fun.Call(paramV)
 	rspErrIdx := -1
 	rspDataIdx := -1
-	if this.handleFuncDesc&rspHasData != 0 {
+	if this.handleFuncDesc&RspHasData != 0 {
 		rspErrIdx = 1
 		rspDataIdx = 0
 	} else {

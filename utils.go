@@ -11,8 +11,8 @@ import (
 var typeOfError = reflect.TypeOf((*error)(nil)).Elem()
 var typeOfContext = reflect.TypeOf((*Context)(nil)).Elem()
 
-func checkInParam(t reflect.Type) (reflect.Type, funcDesc) {
-	fnInDesc := funcDesc(0)
+func checkInParam(t reflect.Type) (reflect.Type, FuncDesc) {
+	fnInDesc := FuncDesc(0)
 	inNum := t.NumIn()
 	var inParamType reflect.Type = nil
 	std.Assert(inNum > 0 && inNum <= 2, "inNum len must less or equal than 2")
@@ -26,7 +26,7 @@ func checkInParam(t reflect.Type) (reflect.Type, funcDesc) {
 		fnInDesc = 0
 	case 2:
 		// func foo(context,param1)
-		fnInDesc = reqHasData
+		fnInDesc = ReqHasData
 		in1 := t.In(1)
 		inParamType = in1
 	default:
@@ -35,16 +35,16 @@ func checkInParam(t reflect.Type) (reflect.Type, funcDesc) {
 	return inParamType, fnInDesc
 }
 
-func checkOutParam(t reflect.Type) (reflect.Type, funcDesc) {
+func checkOutParam(t reflect.Type) (reflect.Type, FuncDesc) {
 	outNum := t.NumOut()
-	fnOutDesc := funcDesc(0)
+	fnOutDesc := FuncDesc(0)
 	var outParamType reflect.Type = nil
 	switch outNum {
 	case 1:
 		out1 := t.Out(0)
 		std.Assert(out1 == typeOfError, "first param of out_param ,type must be `error`")
 	case 2:
-		fnOutDesc = rspHasData
+		fnOutDesc = RspHasData
 		outParamType = t.Out(0)
 		out1 := t.Out(1)
 		std.Assert(out1 == typeOfError, "last param of out_param ,type must be `error`")
