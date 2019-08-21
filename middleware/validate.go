@@ -26,7 +26,8 @@ func Validate(v std.Validator) rpcx.MiddlewareFunc {
 			//
 			next(ctx)
 			//
-			if ctx.Error() != nil {
+			err = ctx.Error()
+			if err != nil {
 				log.Println("validate rsp abort ,caused by:", err)
 				return
 			}
