@@ -38,7 +38,7 @@ func TestCall(t *testing.T) {
 			next(ctx)
 			fmt.Println("tag2")
 		}
-	}, middleware.Validate(std.NewValidator(std.LANG_EN)))
+	}, middleware.ValidateStruct(middleware.ValidateInOut, std.NewValidator(std.LANG_EN)))
 	rpc.RegFuncWithName(rpcFnName, sumFn)
 	rpc.Start()
 	addr := "127.0.0.1:8848"
