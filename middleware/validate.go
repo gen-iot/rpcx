@@ -45,26 +45,27 @@ func ValidateStruct(flag ValidateFlag, v std.Validator) rpcx.MiddlewareFunc {
 			//
 			next(ctx)
 			//
-			if flag&ValidateOut != 0 {
-				err := ctx.Error()
-				if err != nil {
-					log.Println("validate rsp abort ,caused by:", err)
+			if flag&ValidateOut == 0 {
+				return
+			}
+			err := ctx.Error()
+			if err != nil {
+				log.Println("validate rsp abort ,caused by:", err)
+				return
+			}
+			if ctx.LocalFuncDesc()&rpcx.RspHasData != 0 {
+				rspT := ctx.ResponseType()
+				if rspT.Kind() == reflect.Ptr {
+					rspT = rspT.Elem()
+				}
+				if rspT.Kind() != reflect.Struct {
 					return
 				}
-				if ctx.LocalFuncDesc()&rpcx.RspHasData != 0 {
-					rspT := ctx.ResponseType()
-					if rspT.Kind() == reflect.Ptr {
-						rspT = rspT.Elem()
-					}
-					if rspT.Kind() != reflect.Struct {
-						return
-					}
-					err = v.Validate(ctx.Response())
-					if err != nil {
-						log.Println("validate rsp err")
-						ctx.SetError(err)
-						return
-					}
+				err = v.Validate(ctx.Response())
+				if err != nil {
+					log.Println("validate rsp err")
+					ctx.SetError(err)
+					return
 				}
 			}
 		}
