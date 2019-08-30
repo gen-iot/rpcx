@@ -2,9 +2,18 @@ package rpcx
 
 import "github.com/gen-iot/std"
 
-type HandleFunc = func(ctx Context)
+type HandleFunc func(ctx Context)
 
-type MiddlewareFunc = func(next HandleFunc) HandleFunc
+type MiddlewareFunc func(next HandleFunc) HandleFunc
+
+type middlewareList []MiddlewareFunc
+
+func (this middlewareList) build(h HandleFunc) HandleFunc {
+	for i := len(this) - 1; i >= 0; i-- {
+		h = this[i](h)
+	}
+	return h
+}
 
 //noinspection SpellCheckingInspection
 type middleware struct {
@@ -24,8 +33,5 @@ func (this *middleware) Len() int {
 
 func (this *middleware) buildChain(h HandleFunc) HandleFunc {
 	std.Assert(h != nil, "buildMiddleware, h == nil")
-	for i := len(this.midwares) - 1; i >= 0; i-- {
-		h = this.midwares[i](h)
-	}
-	return h
+	return middlewareList(this.midwares).build(h)
 }

@@ -17,17 +17,17 @@ type Callable interface {
 
 	Start()
 
-	Call(timeout time.Duration, name string) error
-	Call0(timeout time.Duration, name string, headers map[string]string) error
+	Call(timeout time.Duration, name string, mids ...MiddlewareFunc) error
+	Call0(timeout time.Duration, name string, headers map[string]string, mids ...MiddlewareFunc) error
 
-	Call1(timeout time.Duration, name string, in interface{}) error
-	Call2(timeout time.Duration, name string, headers map[string]string, in interface{}) error
+	Call1(timeout time.Duration, name string, in interface{}, mids ...MiddlewareFunc) error
+	Call2(timeout time.Duration, name string, headers map[string]string, in interface{}, mids ...MiddlewareFunc) error
 
-	Call3(timeout time.Duration, name string, out interface{}) error
-	Call4(timeout time.Duration, name string, headers map[string]string, out interface{}) error
+	Call3(timeout time.Duration, name string, out interface{}, mids ...MiddlewareFunc) error
+	Call4(timeout time.Duration, name string, headers map[string]string, out interface{}, mids ...MiddlewareFunc) error
 
-	Call5(timeout time.Duration, name string, in, out interface{}) error
-	Call6(timeout time.Duration, name string, headers map[string]string, in, out interface{}) error
+	Call5(timeout time.Duration, name string, in, out interface{}, mids ...MiddlewareFunc) error
+	Call6(timeout time.Duration, name string, headers map[string]string, in, out interface{}, mids ...MiddlewareFunc) error
 
 	Perform(timeout time.Duration, ctx Context)
 
@@ -44,35 +44,35 @@ type rpcCallImpl struct {
 	liblpc.BaseUserData
 }
 
-func (this *rpcCallImpl) Call(timeout time.Duration, name string) error {
-	return this.Call6(timeout, name, nil, nil, nil)
+func (this *rpcCallImpl) Call(timeout time.Duration, name string, mids ...MiddlewareFunc) error {
+	return this.Call6(timeout, name, nil, nil, nil, mids...)
 }
 
-func (this *rpcCallImpl) Call0(timeout time.Duration, name string, headers map[string]string) error {
-	return this.Call6(timeout, name, headers, nil, nil)
+func (this *rpcCallImpl) Call0(timeout time.Duration, name string, headers map[string]string, mids ...MiddlewareFunc) error {
+	return this.Call6(timeout, name, headers, nil, nil, mids...)
 }
 
-func (this *rpcCallImpl) Call1(timeout time.Duration, name string, in interface{}) error {
-	return this.Call6(timeout, name, nil, in, nil)
+func (this *rpcCallImpl) Call1(timeout time.Duration, name string, in interface{}, mids ...MiddlewareFunc) error {
+	return this.Call6(timeout, name, nil, in, nil, mids...)
 }
 
-func (this *rpcCallImpl) Call2(timeout time.Duration, name string, headers map[string]string, in interface{}) error {
-	return this.Call6(timeout, name, headers, in, nil)
+func (this *rpcCallImpl) Call2(timeout time.Duration, name string, headers map[string]string, in interface{}, mids ...MiddlewareFunc) error {
+	return this.Call6(timeout, name, headers, in, nil, mids...)
 }
 
-func (this *rpcCallImpl) Call3(timeout time.Duration, name string, out interface{}) error {
-	return this.Call6(timeout, name, nil, nil, out)
+func (this *rpcCallImpl) Call3(timeout time.Duration, name string, out interface{}, mids ...MiddlewareFunc) error {
+	return this.Call6(timeout, name, nil, nil, out, mids...)
 }
 
-func (this *rpcCallImpl) Call4(timeout time.Duration, name string, headers map[string]string, out interface{}) error {
-	return this.Call6(timeout, name, headers, nil, out)
+func (this *rpcCallImpl) Call4(timeout time.Duration, name string, headers map[string]string, out interface{}, mids ...MiddlewareFunc) error {
+	return this.Call6(timeout, name, headers, nil, out, mids...)
 }
 
-func (this *rpcCallImpl) Call5(timeout time.Duration, name string, in, out interface{}) error {
-	return this.Call6(timeout, name, nil, in, out)
+func (this *rpcCallImpl) Call5(timeout time.Duration, name string, in, out interface{}, mids ...MiddlewareFunc) error {
+	return this.Call6(timeout, name, nil, in, out, mids...)
 }
 
-func (this *rpcCallImpl) Call6(timeout time.Duration, name string, headers map[string]string, in, out interface{}) error {
+func (this *rpcCallImpl) Call6(timeout time.Duration, name string, headers map[string]string, in, out interface{}, mids ...MiddlewareFunc) error {
 	std.Assert(this.stream != nil, "stream is nil!")
 	msgId := std.GenRandomUUID()
 	msg := &rpcRawMsg{
@@ -100,9 +100,14 @@ func (this *rpcCallImpl) Call6(timeout time.Duration, name string, headers map[s
 		ctx.localFnDesc |= RspHasData
 	}
 	ctx.SetRequest(in)
-	f := this.buildInvoke(timeout, ctx, out)
-	h := this.buildChain(f)
-	h(ctx)
+	invoke := this.buildInvoke(timeout, ctx, out)
+	var handleF HandleFunc = nil
+	if len(mids) == 0 {
+		handleF = this.buildChain(invoke)
+	} else {
+		handleF = middlewareList(mids).build(invoke)
+	}
+	handleF(ctx)
 	return ctx.Error()
 }
 
