@@ -39,13 +39,14 @@ func (this *rpcFunc) decodeInParam(data []byte) (interface{}, error) {
 		elementType = this.inParamType.Elem()
 		isPtr = true
 	}
-	newOut := reflect.New(elementType).Interface()
+	newOutValue := reflect.New(elementType)
+	newOut := newOutValue.Interface()
 	err := gRpcSerialization.UnMarshal(data, newOut)
 	if err != nil {
 		return nil, err
 	}
 	if !isPtr {
-		newOut = reflect.ValueOf(newOut).Elem().Interface()
+		newOut = newOutValue.Elem().Interface()
 	}
 	return newOut, nil
 }
