@@ -89,7 +89,9 @@ func (this *rpcCallImpl) Call6(timeout time.Duration, name string, headers map[s
 	}()
 	ctx.init(this, msg)
 	if in != nil {
+		ctx.setRequestType(reflect.TypeOf(in))
 		ctx.localFnDesc |= ReqHasData
+		ctx.SetRequest(in)
 	}
 	if out != nil {
 		// checking
@@ -98,10 +100,11 @@ func (this *rpcCallImpl) Call6(timeout time.Duration, name string, headers map[s
 		std.Assert(outValue.Kind() == reflect.Ptr, "out must be a pointer")
 		std.Assert(!outValue.IsNil(), "out underlying ptr must not be nil")
 		ctx.localFnDesc |= RspHasData
+		ctx.setResponseType(outValue.Type())
 	}
-	ctx.SetRequest(in)
 	invoke := this.buildInvoke(timeout, ctx, out)
 	var handleF HandleFunc = nil
+	// note: if mids not empty ,override global mids
 	if len(mids) == 0 {
 		handleF = this.buildChain(invoke)
 	} else {

@@ -3,7 +3,10 @@ package rpcx
 import (
 	"github.com/gen-iot/liblpc"
 	"github.com/gen-iot/std"
+	"reflect"
 )
+
+type RpcMsgHeader = map[string]string
 
 type Context interface {
 	Callable() Callable
@@ -15,17 +18,20 @@ type Context interface {
 
 	LocalFuncDesc() FuncDesc
 
-	SetRequestHeader(map[string]string)
-	RequestHeader() map[string]string
+	SetRequestHeader(header RpcMsgHeader)
+	RequestHeader() RpcMsgHeader
+
+	SetResponseHeader(header RpcMsgHeader)
+	ResponseHeader() RpcMsgHeader
 
 	SetRequest(in interface{})
-	Request() interface{}
-
-	SetResponseHeader(map[string]string)
-	ResponseHeader() map[string]string
+	Request() (in interface{})
 
 	SetResponse(out interface{})
-	Response() interface{}
+	Response() (out interface{})
+
+	RequestType() reflect.Type
+	ResponseType() reflect.Type
 
 	SetError(err error)
 	Error() error
@@ -36,7 +42,9 @@ type Context interface {
 type contextImpl struct {
 	call        Callable
 	in          interface{}
+	inType      reflect.Type
 	out         interface{}
+	outType     reflect.Type
 	err         error
 	reqMsg      *rpcRawMsg
 	ackMsg      *rpcRawMsg
@@ -100,12 +108,28 @@ func (this *contextImpl) Request() interface{} {
 	return this.in
 }
 
+func (this *contextImpl) RequestType() reflect.Type {
+	return this.inType
+}
+
+func (this *contextImpl) setRequestType(t reflect.Type) {
+	this.inType = t
+}
+
 func (this *contextImpl) SetResponse(out interface{}) {
 	this.out = out
 }
 
+func (this *contextImpl) setResponseType(t reflect.Type) {
+	this.outType = t
+}
+
 func (this *contextImpl) Response() interface{} {
 	return this.out
+}
+
+func (this *contextImpl) ResponseType() reflect.Type {
+	return this.outType
 }
 
 func (this *contextImpl) SetError(err error) {

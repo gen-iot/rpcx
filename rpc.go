@@ -220,25 +220,27 @@ var gRpcSerialization = std.MsgPackSerialization
 
 var errRpcFuncNotFound = errors.New("rpc func not found")
 
-func (this *RPC) lastWriteFn(outMsg *rpcRawMsg, ctx Context) {
-	err := ctx.Error()
-	if err != nil {
-		outMsg.SetError(err)
-	} else {
-		outBytes, err := gRpcSerialization.Marshal(ctx.Response())
-		if err != nil {
-			outMsg.SetError(err)
-		} else {
-			outMsg.Data = outBytes
-		}
-	}
-}
+//func (this *RPC) lastWriteFn(outMsg *rpcRawMsg, ctx Context) {
+//	err := ctx.Error()
+//	if err != nil {
+//		outMsg.SetError(err)
+//	} else {
+//		outBytes, err := gRpcSerialization.Marshal(ctx.Response())
+//		if err != nil {
+//			outMsg.SetError(err)
+//		} else {
+//			outMsg.Data = outBytes
+//		}
+//	}
+//}
 
 func (this *RPC) execWithMiddleware(c Context) {
 	ctx := c.(*contextImpl)
 	fn := this.getFunc(ctx.reqMsg.MethodName)
 	var fnProxy HandleFunc = nil
 	if fn != nil {
+		ctx.setRequestType(fn.inParamType)
+		ctx.setResponseType(fn.outParamType)
 		inParam, err := fn.decodeInParam(ctx.reqMsg.Data)
 		if err != nil {
 			ctx.SetError(err)
