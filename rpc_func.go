@@ -67,7 +67,7 @@ func (this *rpcFunc) ____invoke(c Context) {
 		if Debug {
 			panic(panicErr)
 		}
-		log.Println("call error ", panicErr)
+		log.Printf("call [%s] error:%v\n", ctx.Method(), panicErr)
 		ctx.SetError(errInvokeErr)
 	}()
 	err := ctx.Error()

@@ -138,13 +138,14 @@ func (this *rpcCallImpl) ____invoke(timeout time.Duration, out interface{}, ctx 
 		return
 	}
 	if len(ctx.ackMsg.Data) == 0 {
-		log.Printf("call :callee response data is empty, but caller has out param type:(%T)\n", out)
+		log.Printf("call [%s]:callee response data is empty, but caller has out param type:(%T)\n",
+			ctx.Method(), out)
 		ctx.SetResponse(out)
 		return
 	}
 	err := gRpcSerialization.UnMarshal(ctx.ackMsg.Data, out)
 	if err != nil {
-		log.Println("call :MsgpackUnmarshal got err ->", err)
+		log.Printf("call [%s]:MsgpackUnmarshal got err ->%v\n", ctx.Method(), err)
 		ctx.SetError(err)
 	}
 	ctx.SetResponse(out)
@@ -173,7 +174,7 @@ func (this *rpcCallImpl) Perform(timeout time.Duration, c Context) {
 	future := promise.GetFuture()
 	ackMsgObj, err := future.WaitData(timeout)
 	if err != nil {
-		log.Println("call :future wait got err ->", err)
+		log.Printf("call [%s]:future wait got err ->%v\n", ctx.Method(), err)
 		ctx.SetError(err)
 		return
 	}
