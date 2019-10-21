@@ -11,8 +11,30 @@ import (
 
 type CallableCallback func(callable Callable, err error)
 
-type Callable interface {
+type TimeWheelEntryImpl struct {
 	io.Closer
+	refCount  int32
+	timeWheel *liblpc.TimeWheel
+}
+
+// not thread safe
+func (this *TimeWheelEntryImpl) BindTimeWheel(timeWheel *liblpc.TimeWheel) {
+	this.timeWheel = timeWheel
+}
+
+func (this *TimeWheelEntryImpl) NotifyTimeWheel() {
+	if this.timeWheel == nil {
+		return
+	}
+	this.timeWheel.Entries() <- this
+}
+
+func (this *TimeWheelEntryImpl) GetRefCounter() *int32 {
+	return &this.refCount
+}
+
+type Callable interface {
+	liblpc.BucketEntry
 	liblpc.UserDataStorage
 
 	Start()
@@ -33,6 +55,9 @@ type Callable interface {
 
 	SetOnReady(cb CallableCallback)
 	SetOnClose(cb CallableCallback)
+
+	BindTimeWheel(timeWheel *liblpc.TimeWheel)
+	NotifyTimeWheel()
 }
 
 type rpcCallImpl struct {
@@ -42,6 +67,7 @@ type rpcCallImpl struct {
 	closeCb CallableCallback
 	middleware
 	liblpc.BaseUserData
+	TimeWheelEntryImpl
 }
 
 func (this *rpcCallImpl) Call(timeout time.Duration, name string, mids ...MiddlewareFunc) error {
@@ -115,6 +141,7 @@ func (this *rpcCallImpl) Call6(timeout time.Duration, name string, headers map[s
 }
 
 func (this *rpcCallImpl) Start() {
+	this.NotifyTimeWheel()
 	this.stream.Start()
 }
 

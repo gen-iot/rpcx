@@ -123,6 +123,7 @@ func (this *RPC) newCallable(stream *liblpc.BufferedStream, userData interface{}
 		stream: stream,
 		rpc:    this,
 	}
+	s.TimeWheelEntryImpl.Closer = s
 	//
 	s.Use(m...)
 	//
@@ -191,29 +192,27 @@ func (this *RPC) NewClientCallable(
 		}
 		std.CloseIgnoreErr(pCall)
 	})
+
 	return pCall, nil
 }
 
 const kMaxRpcMsgBodyLen = 1024 * 1024 * 32
 
 func (this *RPC) genericRead(sw liblpc.StreamWriter, buf std.ReadableBuffer) {
-
 	for {
 		rawMsg, err := decodeRpcMsg(buf, kMaxRpcMsgBodyLen)
 		if err != nil {
 			break
 		}
 		isReq := rawMsg.Type == rpcReqMsg
+		call := sw.GetUserData().(Callable)
+		call.NotifyTimeWheel()
 		if isReq {
 			go this.handleReq(sw, rawMsg)
 		} else {
 			this.handleAck(rawMsg)
 		}
 	}
-}
-
-func (this *RPC) handleAck(inMsg *rpcRawMsg) {
-	this.promiseGroup.DonePromise(std.PromiseId(inMsg.Id), inMsg.GetError(), inMsg)
 }
 
 var gRpcSerialization = std.MsgPackSerialization
@@ -260,7 +259,7 @@ func (this *RPC) execWithMiddleware(c Context) {
 }
 
 func (this *RPC) handleReq(sw liblpc.StreamWriter, inMsg *rpcRawMsg) {
-	cli := sw.GetUserData().(*rpcCallImpl)
+	cli := sw.GetUserData().(Callable)
 	ctx := this.grabCtx()
 	defer func() {
 		ctx.reset()
@@ -282,4 +281,8 @@ func (this *RPC) handleReq(sw liblpc.StreamWriter, inMsg *rpcRawMsg) {
 		return // encode rpcMsg failed
 	}
 	sw.Write(sendBytes, false)
+}
+
+func (this *RPC) handleAck(inMsg *rpcRawMsg) {
+	this.promiseGroup.DonePromise(std.PromiseId(inMsg.Id), inMsg.GetError(), inMsg)
 }
