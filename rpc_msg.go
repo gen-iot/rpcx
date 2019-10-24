@@ -47,6 +47,9 @@ func (this *rpcRawMsg) SetErrorString(es string) {
 }
 
 func (this *rpcRawMsg) SetError(err error) {
+	if err == nil {
+		return
+	}
 	es := err.Error()
 	this.Err = &es
 }
