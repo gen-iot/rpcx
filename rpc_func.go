@@ -98,7 +98,6 @@ func (this *rpcFunc) ____invoke(c Context) {
 	if !retV[rspErrIdx].IsNil() { // check error
 		err = retV[rspErrIdx].Interface().(error)
 		ctx.SetError(err)
-		return
 	}
 	if rspDataIdx != -1 {
 		outParam = retV[rspDataIdx].Interface()

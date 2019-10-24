@@ -274,10 +274,14 @@ func (this *RPC) handleReq(sw liblpc.StreamWriter, inMsg *rpcRawMsg) {
 	}
 	proxy(ctx)
 	//
-	outMsg := ctx.buildOutMsg()
+	outMsg, err := ctx.buildOutMsg()
+	if err != nil {
+		log.Printf("RPC handle REQ Id -> %s,build output msg error -> %v\n", inMsg.Id, err)
+		return // build rpcMsg failed
+	}
 	sendBytes, err := encodeRpcMsg(outMsg)
 	if err != nil {
-		log.Printf("RPC handle REQ Id -> %s, error -> %v\n", inMsg.Id, err)
+		log.Printf("RPC handle REQ Id -> %s,marshal output msg error -> %v\n", inMsg.Id, err)
 		return // encode rpcMsg failed
 	}
 	sw.Write(sendBytes, false)

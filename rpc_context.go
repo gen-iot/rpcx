@@ -148,22 +148,19 @@ func (this *contextImpl) LocalFuncDesc() FuncDesc {
 	return this.localFnDesc
 }
 
-func (this *contextImpl) buildOutMsg() *rpcRawMsg {
+func (this *contextImpl) buildOutMsg() (*rpcRawMsg, error) {
 	this.ackMsg = &rpcRawMsg{
 		Id:         this.Id(),
 		MethodName: this.Method(),
 		Type:       rpcAckMsg,
 	}
 	out := this.ackMsg
-	if this.err != nil {
-		out.SetError(this.err)
-	} else {
-		err := out.SetData(this.out)
-		if err != nil {
-			out.SetError(err)
-		}
+	serErr := out.SetData(this.out)
+	if serErr != nil {
+		return nil, serErr
 	}
-	return out
+	out.SetError(this.err)
+	return out, nil
 }
 
 func (this *contextImpl) init(call Callable, inMsg *rpcRawMsg) {
