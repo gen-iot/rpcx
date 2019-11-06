@@ -158,10 +158,12 @@ func (this *rpcCallImpl) buildInvoke(timeout time.Duration, ctx *contextImpl, ou
 // dont call this func directly
 func (this *rpcCallImpl) ____invoke(timeout time.Duration, out interface{}, ctx *contextImpl) {
 	this.Perform(timeout, ctx)
-	if ctx.Error() != nil || /*never happen*/ ctx.ackMsg /*never happen*/ == nil {
-		return
-	}
+	// already assert ctx.ackMsg != nil in Perform
 	if out == nil {
+		//if len(ctx.ackMsg.Data) != 0 {
+		//	log.Printf("call [%s]:callee response with data , but caller doesn't specified a out param\n",
+		//		ctx.Method())
+		//}
 		return
 	}
 	if len(ctx.ackMsg.Data) == 0 {
@@ -173,7 +175,11 @@ func (this *rpcCallImpl) ____invoke(timeout time.Duration, out interface{}, ctx 
 	err := gRpcSerialization.UnMarshal(ctx.ackMsg.Data, out)
 	if err != nil {
 		log.Printf("call [%s]:MsgpackUnmarshal got err ->%v\n", ctx.Method(), err)
-		ctx.SetError(err)
+		if ctx.err != nil {
+			ctx.SetError(std.CombinedErrors{ctx.err, err})
+		} else {
+			ctx.SetError(err)
+		}
 	}
 	ctx.SetResponse(out)
 }
@@ -199,16 +205,12 @@ func (this *rpcCallImpl) Perform(timeout time.Duration, c Context) {
 	this.stream.Write(outBytes, false)
 	//wait for data
 	future := promise.GetFuture()
-	ackMsgObj, err := future.WaitData(timeout)
-	if err != nil {
-		log.Printf("call [%s]:future wait got err ->%v\n", ctx.Method(), err)
-		ctx.SetError(err)
-		return
-	}
+	ackMsgObj, _ := future.WaitData(timeout)
 	std.Assert(ackMsgObj != nil, "ackMsg must not be nil")
 	ackMsg, ok := ackMsgObj.(*rpcRawMsg)
 	std.Assert(ok, "type mismatched ,rpcRawMsg")
 	ctx.ackMsg = ackMsg
+	ctx.SetError(ackMsg.GetError())
 }
 
 func (this *rpcCallImpl) SetOnReady(cb CallableCallback) {
