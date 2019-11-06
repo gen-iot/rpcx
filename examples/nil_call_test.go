@@ -1,6 +1,7 @@
 package examples
 
 import (
+	"errors"
 	"fmt"
 	"github.com/gen-iot/liblpc"
 	"github.com/gen-iot/rpcx"
@@ -20,12 +21,12 @@ type sumRsp struct {
 	Sum int
 }
 
-func sumFn(ctx rpcx.Context) error {
+func sumFn(ctx rpcx.Context) (string, error) {
 	header := ctx.RequestHeader()
 	for k, v := range header {
 		fmt.Println("key=", k, ", value=", v)
 	}
-	return nil
+	return "abc", errors.New("fucking error")
 }
 
 func TestCall(t *testing.T) {
@@ -68,8 +69,13 @@ func TestCall(t *testing.T) {
 			"hello": "world",
 		}, out)
 		fmt.Println("call err :", err)
+		fmt.Println("call out :", *out)
+		std.CloseIgnoreErr(callable)
 		<-callable.CloseSignal()
 		fmt.Println("conn callable closed")
 	}()
 	wg.Wait()
+	std.CloseIgnoreErr(l)
+	std.CloseIgnoreErr(rpc)
+
 }
