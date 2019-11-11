@@ -158,7 +158,9 @@ func (this *rpcCallImpl) buildInvoke(timeout time.Duration, ctx *contextImpl, ou
 // dont call this func directly
 func (this *rpcCallImpl) ____invoke(timeout time.Duration, out interface{}, ctx *contextImpl) {
 	this.Perform(timeout, ctx)
-	// already assert ctx.ackMsg != nil in Perform
+	if ctx.ackMsg == nil {
+		return
+	}
 	if out == nil {
 		//if len(ctx.ackMsg.Data) != 0 {
 		//	log.Printf("call [%s]:callee response with data , but caller doesn't specified a out param\n",
@@ -205,7 +207,11 @@ func (this *rpcCallImpl) Perform(timeout time.Duration, c Context) {
 	this.stream.Write(outBytes, false)
 	//wait for data
 	future := promise.GetFuture()
-	ackMsgObj, _ := future.WaitData(timeout)
+	ackMsgObj, err := future.WaitData(timeout)
+	if err != nil {
+		ctx.SetError(err)
+		return
+	}
 	std.Assert(ackMsgObj != nil, "ackMsg must not be nil")
 	ackMsg, ok := ackMsgObj.(*rpcRawMsg)
 	std.Assert(ok, "type mismatched ,rpcRawMsg")
