@@ -108,8 +108,12 @@ func (this *RPC) RegFunc(f interface{}, m ...MiddlewareFunc) {
 }
 
 func (this *RPC) Start() {
+	go this.Run()
+}
+
+func (this *RPC) Run() {
 	if atomic.CompareAndSwapInt32(&this.startFlag, 0, 1) {
-		go this.ioLoop.Run()
+		this.ioLoop.Run()
 	}
 }
 
