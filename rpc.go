@@ -1,6 +1,7 @@
 package rpcx
 
 import (
+	"context"
 	"errors"
 	"github.com/gen-iot/liblpc"
 	"github.com/gen-iot/std"
@@ -107,13 +108,13 @@ func (this *RPC) RegFunc(f interface{}, m ...MiddlewareFunc) {
 	this.RegFuncWithName(fname, fv, m...)
 }
 
-func (this *RPC) Start() {
-	go this.Run()
+func (this *RPC) Start(ctx context.Context) {
+	go this.Run(ctx)
 }
 
-func (this *RPC) Run() {
+func (this *RPC) Run(ctx context.Context) {
 	if atomic.CompareAndSwapInt32(&this.startFlag, 0, 1) {
-		this.ioLoop.Run()
+		this.ioLoop.Run(ctx)
 	}
 }
 
