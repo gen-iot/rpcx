@@ -46,5 +46,5 @@ func TestAcceptRemote(t *testing.T) {
 	listener := startAcceptor(rpc, t)
 	defer std.CloseIgnoreErr(listener)
 	go mockRemoteRPC(rpc, t)
-	rpc.Run()
+	rpc.Run(nil)
 }

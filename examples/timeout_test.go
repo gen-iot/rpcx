@@ -26,7 +26,7 @@ func TestCallTimeout(t *testing.T) {
 		}
 	}, middleware.ValidateStruct(middleware.ValidateInOut, std.NewValidator(std.LANG_EN)))
 	rpc.RegFuncWithName(rpcFnName, sumFn)
-	rpc.Start()
+	rpc.Start(nil)
 	addr := "127.0.0.1:8848"
 	lfd, err := liblpc.NewListenerFd(addr, 128, true, true)
 	std.AssertError(err, "new listener fd")

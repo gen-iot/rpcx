@@ -1,6 +1,7 @@
 package examples
 
 import (
+	"errors"
 	"github.com/gen-iot/liblpc"
 	"github.com/gen-iot/rpcx"
 	"github.com/gen-iot/rpcx/middleware"
@@ -28,13 +29,13 @@ func TestHelloworld(t *testing.T) {
 	std.AssertError(err, "new rpc")
 	rpc.Use(
 		middleware.Recover(true),
-		middleware.ValidateStruct(
-			middleware.ValidateInOut,
-			std.NewValidator(std.LANG_EN)),
+		//middleware.ValidateStruct(
+		//	middleware.ValidateInOut,
+		//	std.NewValidator(std.LANG_EN)),
 	)
 	rpc.RegFuncWithName("hello",
 		func(ctx rpcx.Context, msg string) (string, error) {
-			return "hello from server", nil
+			return "hello from server", errors.New("abc")
 		},
 		middleware.Recover(true), // recover
 		middleware.ValidateStruct( // validator
@@ -48,5 +49,5 @@ func TestHelloworld(t *testing.T) {
 
 	callable := rpc.NewConnCallable(fds[1], nil)
 	callable.Start()
-	rpc.Run()
+	rpc.Run(nil)
 }
