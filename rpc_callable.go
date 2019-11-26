@@ -210,9 +210,10 @@ func (this *rpcCallImpl) Perform(timeout time.Duration, c Context) {
 	ackMsgObj, err := future.WaitData(timeout)
 	if err != nil {
 		ctx.SetError(err)
+	}
+	if ackMsgObj == nil {
 		return
 	}
-	std.Assert(ackMsgObj != nil, "ackMsg must not be nil")
 	ackMsg, ok := ackMsgObj.(*rpcRawMsg)
 	std.Assert(ok, "type mismatched ,rpcRawMsg")
 	ctx.ackMsg = ackMsg
