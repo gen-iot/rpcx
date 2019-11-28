@@ -273,7 +273,6 @@ func (this *RPC) handleReq(cli Callable, sw liblpc.StreamWriter, inMsg *rpcRawMs
 	//
 	proxy := this.execWithMiddleware
 	if this.preUseMiddleware.Len() != 0 {
-		// fix https://github.com/gen-iot/rpcx/issues/IZHK1
 		proxy = this.preUseMiddleware.buildChain(proxy)
 	}
 	proxy(ctx)
