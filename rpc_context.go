@@ -43,20 +43,23 @@ type Context interface {
 	SetWriter(w Writer)
 	Writer() Writer
 
+	AddDefer(deferFunc func())
+
 	liblpc.UserDataStorage
 }
 
 type contextImpl struct {
-	call        Callable
-	writer      Writer
-	in          interface{}
-	inType      reflect.Type
-	out         interface{}
-	outType     reflect.Type
-	err         error
-	reqMsg      *rpcRawMsg
-	ackMsg      *rpcRawMsg
-	localFnDesc FuncDesc
+	call          Callable
+	writer        Writer
+	in            interface{}
+	inType        reflect.Type
+	out           interface{}
+	outType       reflect.Type
+	err           error
+	reqMsg        *rpcRawMsg
+	ackMsg        *rpcRawMsg
+	localFnDesc   FuncDesc
+	deferFuncList []func()
 	liblpc.BaseUserData
 }
 
@@ -70,6 +73,14 @@ func (this *contextImpl) reset() {
 	this.localFnDesc = 0
 	this.writer = nil
 	this.SetUserData(nil)
+	for i := len(this.deferFuncList) - 1; i >= 0; i-- {
+		this.deferFuncList[i]()
+	}
+	this.deferFuncList = this.deferFuncList[:0]
+}
+
+func (this *contextImpl) AddDefer(deferFunc func()) {
+	this.deferFuncList = append(this.deferFuncList, deferFunc)
 }
 
 func (this *contextImpl) RequestHeader() map[string]string {
@@ -158,11 +169,6 @@ func (this *contextImpl) LocalFuncDesc() FuncDesc {
 }
 
 func (this *contextImpl) buildOutMsg() (*rpcRawMsg, error) {
-	this.ackMsg = &rpcRawMsg{
-		Id:         this.Id(),
-		MethodName: this.Method(),
-		Type:       rpcAckMsg,
-	}
 	out := this.ackMsg
 	serErr := out.SetData(this.out)
 	if serErr != nil {
@@ -176,7 +182,16 @@ func (this *contextImpl) init(writer Writer, call Callable, inMsg *rpcRawMsg) {
 	this.writer = writer
 	this.call = call
 	this.reqMsg = inMsg
+	this.ackMsg = &rpcRawMsg{
+		Id:         this.Id(),
+		MethodName: this.Method(),
+		Type:       rpcAckMsg,
+		Headers:    RpcMsgHeader{},
+	}
 	this.localFnDesc = 0
+	if this.deferFuncList != nil {
+		this.deferFuncList = make([]func(), 0)
+	}
 }
 
 func (this *contextImpl) SetWriter(w Writer) {

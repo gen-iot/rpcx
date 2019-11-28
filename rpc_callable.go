@@ -130,10 +130,12 @@ func (this *rpcCallImpl) Call6(timeout time.Duration, name string, headers map[s
 	}
 	invoke := this.buildInvoke(timeout, ctx, out)
 	var handleF HandleFunc = nil
-	// note: if mids not empty ,override global mids
-	if len(mids) == 0 {
+	if len(mids) == 0 && this.middleware.Len() == 0 {
+		handleF = this.rpc.buildChain(invoke)
+	} else if len(mids) == 0 {
 		handleF = this.buildChain(invoke)
 	} else {
+		// if mids not empty ,override callable itself mids
 		handleF = middlewareList(mids).build(invoke)
 	}
 	handleF(ctx)

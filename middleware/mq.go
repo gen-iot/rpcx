@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"github.com/gen-iot/liblpc"
 	"github.com/gen-iot/rpcx"
 	"github.com/gen-iot/std"
@@ -10,15 +11,13 @@ import (
 
 // todo should reuse it
 type fakeDataWriter struct {
-	data []byte
+	sendF  MqSendFunc
+	target string
+	reply  string
 }
 
 func (this *fakeDataWriter) Write(data []byte, inLoop bool) {
-	this.data = data
-}
-
-func (this *fakeDataWriter) Reuse() {
-	this.data = this.data[:0]
+	this.sendF(this.target, this.reply, data)
 }
 
 var __fdwPool = sync.Pool{
@@ -79,18 +78,14 @@ func (this *Mq) Middleware() rpcx.MiddlewareFunc {
 				ctx.SetError(errors.New("Mq MSG WITHOUT TARGET TOPIC"))
 				return
 			}
-			oldWriter := ctx.Writer()
-			defer ctx.SetWriter(oldWriter)
 			fdw := __fdwPool.Get().(*fakeDataWriter)
-			defer func() {
-				fdw.Reuse()
-				__fdwPool.Put(fdw)
-			}()
+			defer __fdwPool.Put(fdw)
+			fdw.target = targetTopic
+			fdw.reply = replyTopic
+			fdw.sendF = this.mqSend
+			fmt.Println("change writer!")
 			ctx.SetWriter(fdw)
 			next(ctx)
-			if ctx.Error() != nil {
-				this.mqSend(targetTopic, replyTopic, fdw.data)
-			}
 		}
 	}
 }
