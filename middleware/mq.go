@@ -1,10 +1,10 @@
 package middleware
 
 import (
-	"errors"
 	"github.com/gen-iot/liblpc"
 	"github.com/gen-iot/rpcx"
 	"github.com/gen-iot/std"
+	"github.com/pkg/errors"
 	"sync"
 )
 
@@ -29,16 +29,17 @@ var __fdwPool = sync.Pool{
 
 type MqSendFunc func(targetTopic, replyTopic string, msg []byte)
 
-type MQ struct {
+type Mq struct {
 	rpc          *rpcx.RPC
 	pipeWriter   *liblpc.Stream
 	pipeCallable rpcx.Callable
 	mqSend       MqSendFunc
 }
 
-func NewMQ(rpc *rpcx.RPC, mqSend MqSendFunc) (*MQ, error) {
-	std.Assert(rpc != nil && mqSend != nil, "bad params")
-	this := &MQ{
+func NewMq(rpc *rpcx.RPC, mqSend MqSendFunc) (*Mq, error) {
+	std.Assert(rpc != nil, "rpc is required")
+	std.Assert(mqSend != nil, "mqSend is required")
+	this := &Mq{
 		rpc:    rpc,
 		mqSend: mqSend,
 	}
@@ -53,17 +54,17 @@ func NewMQ(rpc *rpcx.RPC, mqSend MqSendFunc) (*MQ, error) {
 	return this, nil
 }
 
-func (this *MQ) Close() error {
+func (this *Mq) Close() error {
 	std.CloseIgnoreErr(this.pipeWriter)
 	std.CloseIgnoreErr(this.pipeCallable)
 	return nil
 }
 
-func (this *MQ) OnReceive(msg []byte) {
+func (this *Mq) OnReceive(msg []byte) {
 	this.pipeWriter.Write(msg, false)
 }
 
-func (this *MQ) Middleware() rpcx.MiddlewareFunc {
+func (this *Mq) Middleware() rpcx.MiddlewareFunc {
 	return func(next rpcx.HandleFunc) rpcx.HandleFunc {
 		return func(ctx rpcx.Context) {
 			header := ctx.RequestHeader()
@@ -75,7 +76,7 @@ func (this *MQ) Middleware() rpcx.MiddlewareFunc {
 			targetTopic, ok1 := header["MQ_TARGET_TOPIC"]
 			replyTopic, _ := header["MQ_REPLY_TOPIC"]
 			if !ok1 {
-				ctx.SetError(errors.New("MQ MSG WITHOUT TARGET TOPIC"))
+				ctx.SetError(errors.New("Mq MSG WITHOUT TARGET TOPIC"))
 				return
 			}
 			oldWriter := ctx.Writer()
@@ -91,5 +92,13 @@ func (this *MQ) Middleware() rpcx.MiddlewareFunc {
 				this.mqSend(targetTopic, replyTopic, fdw.data)
 			}
 		}
+	}
+}
+
+func MqMakeHeader(target, reply string) rpcx.RpcMsgHeader {
+	return rpcx.RpcMsgHeader{
+		"MQ_PROTOCOL":     "1",
+		"MQ_TARGET_TOPIC": target,
+		"MQ_REPLY_TOPIC":  reply,
 	}
 }
