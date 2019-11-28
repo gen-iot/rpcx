@@ -46,13 +46,14 @@ func fakeMq(ctx context.Context, mq *middleware.Mq) {
 	}
 }
 
-func fakeCall(rpc *rpcx.RPC) {
+func fakeCall(rpc *rpcx.RPC, cancelFunc func()) {
+	defer cancelFunc()
 	sockFd, err := liblpc.NewTcpSocketFd(4, true, true)
 	std.AssertError(err, "new sock fd")
 	callable := rpc.NewConnCallable(int(sockFd), nil)
 	callable.Start()
 	out := new(string)
-	err = callable.Call6(time.Second*50, "hello", middleware.MqMakeHeader("abc", "xyz"), "client msg", out)
+	err = callable.Call6(time.Second*5, "hello", middleware.MqMakeHeader("abc", "xyz"), "client msg", out)
 	std.AssertError(err, "call error")
 	fmt.Printf("go ack:%s\n", *out)
 }
@@ -63,6 +64,7 @@ func TestMq(t *testing.T) {
 	//
 	rpc, err := rpcx.New()
 	std.AssertError(err, "new rpc")
+	defer std.CloseIgnoreErr(rpc)
 	//
 	mq, err := middleware.NewMq(rpc, wrapMqSend(ch1))
 	std.AssertError(err, "new mq mid")
@@ -74,7 +76,7 @@ func TestMq(t *testing.T) {
 	})
 	//
 	go fakeMq(ctx, mq)
-	go fakeCall(rpc)
+	go fakeCall(rpc, cancelFunc)
 	//
 	rpc.Run(ctx)
 }

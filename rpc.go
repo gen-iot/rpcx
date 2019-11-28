@@ -289,7 +289,7 @@ func (this *RPC) handleReq(cli Callable, sw liblpc.StreamWriter, inMsg *rpcRawMs
 		return // encode rpcMsg failed
 	}
 	if writer := ctx.Writer(); writer != nil {
-		sw.Write(sendBytes, false)
+		writer.Write(sendBytes, false)
 	}
 }
 

@@ -138,6 +138,9 @@ func (this *rpcCallImpl) Call6(timeout time.Duration, name string, headers map[s
 		// if mids not empty ,override callable itself mids
 		handleF = middlewareList(mids).build(invoke)
 	}
+	if this.rpc.preUseMiddleware.Len() != 0 {
+		handleF = this.rpc.preUseMiddleware.buildChain(handleF)
+	}
 	handleF(ctx)
 	return ctx.Error()
 }

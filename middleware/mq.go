@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"github.com/gen-iot/liblpc"
 	"github.com/gen-iot/rpcx"
 	"github.com/gen-iot/std"
@@ -18,6 +17,12 @@ type fakeDataWriter struct {
 
 func (this *fakeDataWriter) Write(data []byte, inLoop bool) {
 	this.sendF(this.target, this.reply, data)
+}
+
+func (this *fakeDataWriter) reset() {
+	this.sendF = nil
+	this.target = this.target[:0]
+	this.reply = this.reply[:0]
 }
 
 var __fdwPool = sync.Pool{
@@ -79,11 +84,13 @@ func (this *Mq) Middleware() rpcx.MiddlewareFunc {
 				return
 			}
 			fdw := __fdwPool.Get().(*fakeDataWriter)
-			defer __fdwPool.Put(fdw)
+			ctx.AddDefer(func() {
+				fdw.reset()
+				__fdwPool.Put(fdw)
+			})
 			fdw.target = targetTopic
 			fdw.reply = replyTopic
 			fdw.sendF = this.mqSend
-			fmt.Println("change writer!")
 			ctx.SetWriter(fdw)
 			next(ctx)
 		}
