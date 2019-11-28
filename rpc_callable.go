@@ -113,7 +113,7 @@ func (this *rpcCallImpl) Call6(timeout time.Duration, name string, headers map[s
 		ctx.reset()
 		this.rpc.releaseCtx(ctx)
 	}()
-	ctx.init(this, msg)
+	ctx.init(this.stream, this, msg)
 	if in != nil {
 		ctx.setRequestType(reflect.TypeOf(in))
 		ctx.localFnDesc |= ReqHasData
@@ -204,7 +204,9 @@ func (this *rpcCallImpl) Perform(timeout time.Duration, c Context) {
 	this.rpc.promiseGroup.AddPromise(promiseId, promise)
 	defer this.rpc.promiseGroup.RemovePromise(promiseId)
 	//
-	this.stream.Write(outBytes, false)
+	if writer := ctx.Writer(); writer != nil {
+		writer.Write(outBytes, false)
+	}
 	//wait for data
 	future := promise.GetFuture()
 	ackMsgObj, err := future.WaitData(timeout)

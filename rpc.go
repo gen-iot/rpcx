@@ -213,7 +213,7 @@ func (this *RPC) genericRead(sw liblpc.StreamWriter, buf std.ReadableBuffer) {
 		call := sw.GetUserData().(Callable)
 		call.NotifyTimeWheel()
 		if isReq {
-			go this.handleReq(sw, rawMsg)
+			go this.handleReq(call, sw, rawMsg)
 		} else {
 			this.handleAck(rawMsg)
 		}
@@ -263,14 +263,13 @@ func (this *RPC) execWithMiddleware(c Context) {
 	fnProxy(ctx)
 }
 
-func (this *RPC) handleReq(sw liblpc.StreamWriter, inMsg *rpcRawMsg) {
-	cli := sw.GetUserData().(Callable)
+func (this *RPC) handleReq(cli Callable, sw liblpc.StreamWriter, inMsg *rpcRawMsg) {
 	ctx := this.grabCtx()
 	defer func() {
 		ctx.reset()
 		this.releaseCtx(ctx)
 	}()
-	ctx.init(cli, inMsg)
+	ctx.init(sw, cli, inMsg)
 	//
 	proxy := this.execWithMiddleware
 	if this.preUseMiddleware.Len() != 0 {
@@ -289,7 +288,9 @@ func (this *RPC) handleReq(sw liblpc.StreamWriter, inMsg *rpcRawMsg) {
 		log.Printf("RPC handle REQ Id -> %s,marshal output msg error -> %v\n", inMsg.Id, err)
 		return // encode rpcMsg failed
 	}
-	sw.Write(sendBytes, false)
+	if writer := ctx.Writer(); writer != nil {
+		sw.Write(sendBytes, false)
+	}
 }
 
 func (this *RPC) handleAck(inMsg *rpcRawMsg) {

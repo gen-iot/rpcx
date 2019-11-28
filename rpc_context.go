@@ -8,6 +8,10 @@ import (
 
 type RpcMsgHeader = map[string]string
 
+type Writer interface {
+	Write(data []byte, inLoop bool)
+}
+
 type Context interface {
 	Callable() Callable
 
@@ -36,11 +40,15 @@ type Context interface {
 	SetError(err error)
 	Error() error
 
+	SetWriter(w Writer)
+	Writer() Writer
+
 	liblpc.UserDataStorage
 }
 
 type contextImpl struct {
 	call        Callable
+	writer      Writer
 	in          interface{}
 	inType      reflect.Type
 	out         interface{}
@@ -60,6 +68,7 @@ func (this *contextImpl) reset() {
 	this.reqMsg = nil
 	this.ackMsg = nil
 	this.localFnDesc = 0
+	this.writer = nil
 	this.SetUserData(nil)
 }
 
@@ -163,8 +172,17 @@ func (this *contextImpl) buildOutMsg() (*rpcRawMsg, error) {
 	return out, nil
 }
 
-func (this *contextImpl) init(call Callable, inMsg *rpcRawMsg) {
+func (this *contextImpl) init(writer Writer, call Callable, inMsg *rpcRawMsg) {
+	this.writer = writer
 	this.call = call
 	this.reqMsg = inMsg
 	this.localFnDesc = 0
+}
+
+func (this *contextImpl) SetWriter(w Writer) {
+	this.writer = w
+}
+
+func (this *contextImpl) Writer() Writer {
+	return this.writer
 }
