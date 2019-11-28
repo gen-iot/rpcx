@@ -52,7 +52,7 @@ func TestCallTimeout(t *testing.T) {
 		fmt.Println("conn callable ready!")
 		out := new(string)
 		time.Sleep(time.Second * 13)
-		err = callable.Call4(time.Second*5, rpcFnName, map[string]string{
+		_, err = callable.Call4(time.Second*5, rpcFnName, map[string]string{
 			"k1":    "k2",
 			"hello": "world",
 		}, out)

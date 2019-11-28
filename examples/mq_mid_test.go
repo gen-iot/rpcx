@@ -53,7 +53,7 @@ func fakeCall(rpc *rpcx.RPC, cancelFunc func()) {
 	callable := rpc.NewConnCallable(int(sockFd), nil)
 	callable.Start()
 	out := new(string)
-	err = callable.Call6(time.Second*5, "hello", middleware.MqMakeHeader("abc", "xyz"), "client msg", out)
+	_, err = callable.Call6(time.Second*5, "hello", middleware.MqMakeHeader("abc", "xyz"), "client msg", out)
 	std.AssertError(err, "call error")
 	fmt.Printf("go ack:%s\n", *out)
 }

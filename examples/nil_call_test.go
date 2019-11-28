@@ -23,6 +23,10 @@ type sumRsp struct {
 
 func sumFn(ctx rpcx.Context) (string, error) {
 	header := ctx.RequestHeader()
+	responseHeader := ctx.ResponseHeader()
+	responseHeader["ack1"] = "ack1"
+	responseHeader["ack2"] = "ack2"
+	responseHeader["ack3"] = "ack3"
 	for k, v := range header {
 		fmt.Println("key=", k, ", value=", v)
 	}
@@ -64,10 +68,11 @@ func TestCall(t *testing.T) {
 		<-callable.ReadySignal()
 		fmt.Println("conn callable ready!")
 		out := new(string)
-		err = callable.Call4(time.Second*5, rpcFnName, map[string]string{
+		ackHeader, err := callable.Call4(time.Second*5, rpcFnName, map[string]string{
 			"k1":    "k2",
 			"hello": "world",
 		}, out)
+		fmt.Println("ack header=", ackHeader)
 		fmt.Println("call err :", err)
 		fmt.Println("call out :", *out)
 		std.CloseIgnoreErr(callable)

@@ -40,16 +40,16 @@ type Callable interface {
 	Start()
 
 	Call(timeout time.Duration, name string, mids ...MiddlewareFunc) error
-	Call0(timeout time.Duration, name string, headers map[string]string, mids ...MiddlewareFunc) error
+	Call0(timeout time.Duration, name string, headers RpcMsgHeader, mids ...MiddlewareFunc) (ackHeader RpcMsgHeader, err error)
 
 	Call1(timeout time.Duration, name string, in interface{}, mids ...MiddlewareFunc) error
-	Call2(timeout time.Duration, name string, headers map[string]string, in interface{}, mids ...MiddlewareFunc) error
+	Call2(timeout time.Duration, name string, headers RpcMsgHeader, in interface{}, mids ...MiddlewareFunc) (ackHeader RpcMsgHeader, err error)
 
 	Call3(timeout time.Duration, name string, out interface{}, mids ...MiddlewareFunc) error
-	Call4(timeout time.Duration, name string, headers map[string]string, out interface{}, mids ...MiddlewareFunc) error
+	Call4(timeout time.Duration, name string, headers RpcMsgHeader, out interface{}, mids ...MiddlewareFunc) (ackHeader RpcMsgHeader, err error)
 
 	Call5(timeout time.Duration, name string, in, out interface{}, mids ...MiddlewareFunc) error
-	Call6(timeout time.Duration, name string, headers map[string]string, in, out interface{}, mids ...MiddlewareFunc) error
+	Call6(timeout time.Duration, name string, headers RpcMsgHeader, in, out interface{}, mids ...MiddlewareFunc) (ackHeader RpcMsgHeader, err error)
 
 	Perform(timeout time.Duration, ctx Context)
 
@@ -71,34 +71,38 @@ type rpcCallImpl struct {
 }
 
 func (this *rpcCallImpl) Call(timeout time.Duration, name string, mids ...MiddlewareFunc) error {
-	return this.Call6(timeout, name, nil, nil, nil, mids...)
+	_, err := this.Call6(timeout, name, nil, nil, nil, mids...)
+	return err
 }
 
-func (this *rpcCallImpl) Call0(timeout time.Duration, name string, headers map[string]string, mids ...MiddlewareFunc) error {
+func (this *rpcCallImpl) Call0(timeout time.Duration, name string, headers RpcMsgHeader, mids ...MiddlewareFunc) (ackHeader RpcMsgHeader, err error) {
 	return this.Call6(timeout, name, headers, nil, nil, mids...)
 }
 
 func (this *rpcCallImpl) Call1(timeout time.Duration, name string, in interface{}, mids ...MiddlewareFunc) error {
-	return this.Call6(timeout, name, nil, in, nil, mids...)
+	_, err := this.Call6(timeout, name, nil, in, nil, mids...)
+	return err
 }
 
-func (this *rpcCallImpl) Call2(timeout time.Duration, name string, headers map[string]string, in interface{}, mids ...MiddlewareFunc) error {
+func (this *rpcCallImpl) Call2(timeout time.Duration, name string, headers RpcMsgHeader, in interface{}, mids ...MiddlewareFunc) (ackHeader RpcMsgHeader, err error) {
 	return this.Call6(timeout, name, headers, in, nil, mids...)
 }
 
 func (this *rpcCallImpl) Call3(timeout time.Duration, name string, out interface{}, mids ...MiddlewareFunc) error {
-	return this.Call6(timeout, name, nil, nil, out, mids...)
+	_, err := this.Call6(timeout, name, nil, nil, out, mids...)
+	return err
 }
 
-func (this *rpcCallImpl) Call4(timeout time.Duration, name string, headers map[string]string, out interface{}, mids ...MiddlewareFunc) error {
+func (this *rpcCallImpl) Call4(timeout time.Duration, name string, headers RpcMsgHeader, out interface{}, mids ...MiddlewareFunc) (ackHeader RpcMsgHeader, err error) {
 	return this.Call6(timeout, name, headers, nil, out, mids...)
 }
 
 func (this *rpcCallImpl) Call5(timeout time.Duration, name string, in, out interface{}, mids ...MiddlewareFunc) error {
-	return this.Call6(timeout, name, nil, in, out, mids...)
+	_, err := this.Call6(timeout, name, nil, in, out, mids...)
+	return err
 }
 
-func (this *rpcCallImpl) Call6(timeout time.Duration, name string, headers map[string]string, in, out interface{}, mids ...MiddlewareFunc) error {
+func (this *rpcCallImpl) Call6(timeout time.Duration, name string, headers RpcMsgHeader, in, out interface{}, mids ...MiddlewareFunc) (ackHeader RpcMsgHeader, err error) {
 	std.Assert(this.stream != nil, "stream is nil!")
 	msgId := std.GenRandomUUID()
 	msg := &rpcRawMsg{
@@ -142,7 +146,7 @@ func (this *rpcCallImpl) Call6(timeout time.Duration, name string, headers map[s
 		handleF = this.rpc.preUseMiddleware.buildChain(handleF)
 	}
 	handleF(ctx)
-	return ctx.Error()
+	return ctx.ResponseHeader(), ctx.Error()
 }
 
 func (this *rpcCallImpl) Start() {
