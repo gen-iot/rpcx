@@ -135,15 +135,15 @@ func (this *rpcCallImpl) Call6(timeout time.Duration, name string, headers RpcMs
 	invoke := this.buildInvoke(timeout, ctx, out)
 	var handleF HandleFunc = nil
 	if len(mids) == 0 && this.middleware.Len() == 0 {
-		handleF = this.rpc.buildChain(invoke)
+		handleF = this.rpc.buildChain(invoke) // use rpc default chain
 	} else if len(mids) == 0 {
-		handleF = this.buildChain(invoke)
+		handleF = this.middleware.buildChain(invoke) // use callable itself chain
 	} else {
 		// if mids not empty ,override callable itself mids
 		handleF = middlewareList(mids).build(invoke)
 	}
 	if this.rpc.preUseMiddleware.Len() != 0 {
-		handleF = this.rpc.preUseMiddleware.buildChain(handleF)
+		handleF = this.rpc.preUseMiddleware.buildChain(handleF) // prepend preUsed chain
 	}
 	handleF(ctx)
 	return ctx.ResponseHeader(), ctx.Error()
