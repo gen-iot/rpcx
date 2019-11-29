@@ -1,4 +1,4 @@
-module github.com/gen-iot/rpcx
+module github.com/gen-iot/rpcx/v2
 
 go 1.12
 

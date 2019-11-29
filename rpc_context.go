@@ -6,12 +6,6 @@ import (
 	"reflect"
 )
 
-type RpcMsgHeader = map[string]string
-
-type Writer interface {
-	Write(data []byte, inLoop bool)
-}
-
 type Context interface {
 	Callable() Callable
 
@@ -35,7 +29,19 @@ type Context interface {
 	Response() (out interface{})
 
 	RequestType() reflect.Type
+	SetRequestType(t reflect.Type)
+
 	ResponseType() reflect.Type
+	SetResponseType(t reflect.Type)
+
+	ReqMsg() *RawMsg
+	SetReqMsg(msg *RawMsg)
+
+	AckMsg() *RawMsg
+	SetAckMsg(msg *RawMsg)
+
+	FuncDesc() FuncDesc
+	SetFuncDesc(desc FuncDesc)
 
 	SetError(err error)
 	Error() error
@@ -44,6 +50,12 @@ type Context interface {
 	Writer() Writer
 
 	AddDefer(deferFunc func())
+
+	Reset()
+
+	Init(call Callable, inMsg *RawMsg)
+
+	BuildOutMsg() (*RawMsg, error)
 
 	liblpc.UserDataStorage
 }
@@ -56,14 +68,14 @@ type contextImpl struct {
 	out           interface{}
 	outType       reflect.Type
 	err           error
-	reqMsg        *rpcRawMsg
-	ackMsg        *rpcRawMsg
+	reqMsg        *RawMsg
+	ackMsg        *RawMsg
 	localFnDesc   FuncDesc
 	deferFuncList []func()
 	liblpc.BaseUserData
 }
 
-func (this *contextImpl) reset() {
+func (this *contextImpl) Reset() {
 	this.call = nil
 	this.in = nil
 	this.out = nil
@@ -132,7 +144,7 @@ func (this *contextImpl) RequestType() reflect.Type {
 	return this.inType
 }
 
-func (this *contextImpl) setRequestType(t reflect.Type) {
+func (this *contextImpl) SetRequestType(t reflect.Type) {
 	this.inType = t
 }
 
@@ -140,7 +152,7 @@ func (this *contextImpl) SetResponse(out interface{}) {
 	this.out = out
 }
 
-func (this *contextImpl) setResponseType(t reflect.Type) {
+func (this *contextImpl) SetResponseType(t reflect.Type) {
 	this.outType = t
 }
 
@@ -168,7 +180,7 @@ func (this *contextImpl) LocalFuncDesc() FuncDesc {
 	return this.localFnDesc
 }
 
-func (this *contextImpl) buildOutMsg() (*rpcRawMsg, error) {
+func (this *contextImpl) BuildOutMsg() (*RawMsg, error) {
 	out := this.ackMsg
 	serErr := out.SetData(this.out)
 	if serErr != nil {
@@ -178,14 +190,14 @@ func (this *contextImpl) buildOutMsg() (*rpcRawMsg, error) {
 	return out, nil
 }
 
-func (this *contextImpl) init(writer Writer, call Callable, inMsg *rpcRawMsg) {
-	this.writer = writer
+func (this *contextImpl) Init(call Callable, inMsg *RawMsg) {
 	this.call = call
+	this.writer = call.Writer()
 	this.reqMsg = inMsg
-	this.ackMsg = &rpcRawMsg{
+	this.ackMsg = &RawMsg{
 		Id:         this.Id(),
 		MethodName: this.Method(),
-		Type:       rpcAckMsg,
+		Type:       AckMsg,
 		Headers:    RpcMsgHeader{},
 	}
 	this.localFnDesc = 0
@@ -200,4 +212,28 @@ func (this *contextImpl) SetWriter(w Writer) {
 
 func (this *contextImpl) Writer() Writer {
 	return this.writer
+}
+
+func (this *contextImpl) FuncDesc() FuncDesc {
+	return this.localFnDesc
+}
+
+func (this *contextImpl) SetFuncDesc(desc FuncDesc) {
+	this.localFnDesc = desc
+}
+
+func (this *contextImpl) ReqMsg() *RawMsg {
+	return this.reqMsg
+}
+
+func (this *contextImpl) SetReqMsg(msg *RawMsg) {
+	this.reqMsg = msg
+}
+
+func (this *contextImpl) AckMsg() *RawMsg {
+	return this.ackMsg
+}
+
+func (this *contextImpl) SetAckMsg(msg *RawMsg) {
+	this.ackMsg = msg
 }

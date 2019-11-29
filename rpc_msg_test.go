@@ -25,10 +25,10 @@ func newExampleStruct() *exampleStruct {
 }
 
 func TestEncodeMessage_MSGPACK(t *testing.T) {
-	msg := &rpcRawMsg{
+	msg := &RawMsg{
 		Id:         std.GenRandomUUID(),
 		MethodName: "sum",
-		Type:       rpcReqMsg,
+		Type:       ReqMsg,
 	}
 	msg.SetErrorString("try set error")
 	std.AssertError(msg.SetData(newExampleStruct()), "set data error")

@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"errors"
-	"github.com/gen-iot/rpcx"
+	"github.com/gen-iot/rpcx/v2"
 	"reflect"
 )
 

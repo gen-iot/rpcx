@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/gen-iot/liblpc"
-	"github.com/gen-iot/rpcx"
-	"github.com/gen-iot/rpcx/middleware"
+	"github.com/gen-iot/rpcx/v2"
+	"github.com/gen-iot/rpcx/v2/middleware"
 	"github.com/gen-iot/std"
 	"sync"
 	"testing"
@@ -15,25 +15,25 @@ import (
 func TestCallTimeout(t *testing.T) {
 	wheel := liblpc.NewTimeWheel(2, 4)
 	go wheel.Execute(context.Background())
-	rpc, err := rpcx.New()
-	std.AssertError(err, "rpc new")
+	core, err := rpcx.New()
+	std.AssertError(err, "core new")
 	const rpcFnName = "Sum"
-	rpc.Use(func(next rpcx.HandleFunc) rpcx.HandleFunc {
+	core.Use(func(next rpcx.HandleFunc) rpcx.HandleFunc {
 		return func(ctx rpcx.Context) {
 			fmt.Println("tag1")
 			next(ctx)
 			fmt.Println("tag2")
 		}
 	}, middleware.ValidateStruct(middleware.ValidateInOut, std.NewValidator(std.LANG_EN)))
-	rpc.RegFuncWithName(rpcFnName, sumFn)
-	rpc.Start(nil)
+	core.RegFuncWithName(rpcFnName, sumFn)
+	core.Start(nil)
 	addr := "127.0.0.1:8848"
 	lfd, err := liblpc.NewListenerFd(addr, 128, true, true)
 	std.AssertError(err, "new listener fd")
-	l := liblpc.NewListener(rpc.Loop(), int(lfd), func(ln *liblpc.Listener, newFd int, err error) {
+	l := liblpc.NewListener(core.Loop(), int(lfd), func(ln *liblpc.Listener, newFd int, err error) {
 		std.AssertError(err, "accept err")
 		fmt.Println("accept success")
-		call := rpc.NewConnCallable(newFd, nil)
+		call := rpcx.NewConnStreamCallable(core, newFd, nil)
 		call.BindTimeWheel(wheel)
 		call.Start()
 	})
@@ -44,7 +44,7 @@ func TestCallTimeout(t *testing.T) {
 		defer wg.Done()
 		sockAddr, err := liblpc.ResolveTcpAddr(addr)
 		std.AssertError(err, "resolve addr err")
-		call, err := rpc.NewClientCallable(sockAddr, nil)
+		call, err := rpcx.NewClientStreamCallable(core, sockAddr, nil)
 		std.AssertError(err, "new client callable")
 		callable := rpcx.NewSignalCallable(call)
 		callable.Start()

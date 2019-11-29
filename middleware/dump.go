@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"github.com/gen-iot/rpcx"
+	"github.com/gen-iot/rpcx/v2"
 	"log"
 	"time"
 )

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/gen-iot/liblpc"
 	"github.com/gen-iot/std"
+	"io"
 	"log"
 	"reflect"
 	"sync"
@@ -13,8 +14,26 @@ import (
 
 //noinspection GoUnusedGlobalVariable
 var Debug = true
+var gRpcSerialization = std.MsgPackSerialization
 
-type RPC struct {
+type Core interface {
+	Loop() *liblpc.IOEvtLoop
+	RegFunc(f interface{}, m ...MiddlewareFunc)
+	RegFuncWithName(fname string, f interface{}, m ...MiddlewareFunc)
+	PreUse(m ...MiddlewareFunc)
+	Use(m ...MiddlewareFunc)
+	BuildChain(h HandleFunc) HandleFunc
+	BuildPreUsedChain(h HandleFunc) HandleFunc
+	Run(ctx context.Context)
+	Start(ctx context.Context)
+	GrabContext() Context
+	ReleaseContext(c Context)
+	PromiseGroup() *std.PromiseGroup
+	NotifyCallableRead(call Callable, buf std.ReadableBuffer)
+	io.Closer
+}
+
+type coreImpl struct {
 	ioLoop       *liblpc.IOEvtLoop
 	rcpFuncMap   map[string]*rpcFunc
 	promiseGroup *std.PromiseGroup
@@ -27,12 +46,12 @@ type RPC struct {
 
 const RpcLoopDefaultBufferSize = 1024 * 1024 * 4
 
-func New() (*RPC, error) {
+func New() (core Core, err error) {
 	loop, err := liblpc.NewIOEvtLoop(RpcLoopDefaultBufferSize)
 	if err != nil {
 		return nil, err
 	}
-	rpc := &RPC{
+	rpc := &coreImpl{
 		ioLoop:       loop,
 		rcpFuncMap:   make(map[string]*rpcFunc),
 		promiseGroup: std.NewPromiseGroup(),
@@ -45,24 +64,28 @@ func New() (*RPC, error) {
 	return rpc, nil
 }
 
-func (this *RPC) grabCtx() *contextImpl {
+func (this *coreImpl) GrabContext() Context {
 	ctxImpl := this.ctxPool.Get().(*contextImpl)
 	return ctxImpl
 }
 
-func (this *RPC) releaseCtx(ctx *contextImpl) {
+func (this *coreImpl) ReleaseContext(ctx Context) {
 	std.Assert(ctx != nil, "return ctx is nil")
 	this.ctxPool.Put(ctx)
 }
 
-func (this *RPC) PreUse(m ...MiddlewareFunc) {
+func (this *coreImpl) PromiseGroup() *std.PromiseGroup {
+	return this.promiseGroup
+}
+
+func (this *coreImpl) PreUse(m ...MiddlewareFunc) {
 	this.preUseMiddleware.Use(m...)
 }
 
-func (this *RPC) Loop() liblpc.EventLoop {
+func (this *coreImpl) Loop() *liblpc.IOEvtLoop {
 	return this.ioLoop
 }
-func (this *RPC) getFunc(name string) *rpcFunc {
+func (this *coreImpl) getFunc(name string) *rpcFunc {
 	this.lock.RLock()
 	defer this.lock.RUnlock()
 	fn, ok := this.rcpFuncMap[name]
@@ -72,7 +95,7 @@ func (this *RPC) getFunc(name string) *rpcFunc {
 	return fn
 }
 
-func (this *RPC) RegFuncWithName(fname string, f interface{}, m ...MiddlewareFunc) {
+func (this *coreImpl) RegFuncWithName(fname string, f interface{}, m ...MiddlewareFunc) {
 	fv, ok := f.(reflect.Value)
 	if !ok {
 		fv = reflect.ValueOf(f)
@@ -98,7 +121,7 @@ func (this *RPC) RegFuncWithName(fname string, f interface{}, m ...MiddlewareFun
 	this.rcpFuncMap[fname] = fn
 }
 
-func (this *RPC) RegFunc(f interface{}, m ...MiddlewareFunc) {
+func (this *coreImpl) RegFunc(f interface{}, m ...MiddlewareFunc) {
 	fv, ok := f.(reflect.Value)
 	if !ok {
 		fv = reflect.ValueOf(f)
@@ -108,143 +131,48 @@ func (this *RPC) RegFunc(f interface{}, m ...MiddlewareFunc) {
 	this.RegFuncWithName(fname, fv, m...)
 }
 
-func (this *RPC) Start(ctx context.Context) {
+func (this *coreImpl) Start(ctx context.Context) {
 	go this.Run(ctx)
 }
 
-func (this *RPC) Run(ctx context.Context) {
+func (this *coreImpl) Run(ctx context.Context) {
 	if atomic.CompareAndSwapInt32(&this.startFlag, 0, 1) {
 		this.ioLoop.Run(ctx)
 	}
 }
 
-func (this *RPC) Close() error {
+func (this *coreImpl) Close() error {
 	this.ioLoop.Break()
 	return this.ioLoop.Close()
 }
 
-func (this *RPC) newCallable(stream *liblpc.BufferedStream, userData interface{}, m []MiddlewareFunc) *rpcCallImpl {
-	s := &rpcCallImpl{
-		stream: stream,
-		rpc:    this,
-	}
-	s.TimeWheelEntryImpl.Closer = s
-	//
-	s.Use(m...)
-	//
-	s.SetUserData(userData)
-	s.stream.SetUserData(s)
-	//
-	return s
-}
-
-func (this *RPC) callableClosed(sw liblpc.StreamWriter, err error) {
-	log.Println("RPC READ ERROR ", err)
-	std.CloseIgnoreErr(sw)
-	udata := sw.GetUserData()
-	if udata == nil {
-		return
-	}
-	if call, ok := udata.(Callable); ok {
-		std.CloseIgnoreErr(call)
-	}
-	return
-}
-
-func (this *RPC) NewConnCallable(fd int, userData interface{}, m ...MiddlewareFunc) Callable {
-	stream := liblpc.NewBufferedConnStream(this.ioLoop, fd, this.genericRead)
-	pCall := this.newCallable(stream, userData, m)
-	stream.SetOnConnect(func(sw liblpc.StreamWriter, err error) {
-		if pCall.readyCb != nil {
-			pCall.readyCb(pCall, err)
-		}
-		if err != nil {
-			std.CloseIgnoreErr(pCall)
-		}
-	})
-	stream.SetOnClose(func(sw liblpc.StreamWriter, err error) {
-		if pCall.closeCb != nil {
-			pCall.closeCb(pCall, err)
-		}
-		std.CloseIgnoreErr(pCall)
-	})
-	return pCall
-}
-
-type ClientCallableOnConnect func(callable Callable, err error)
-
-func (this *RPC) NewClientCallable(
-	addr *liblpc.SyscallSockAddr,
-	userData interface{},
-	m ...MiddlewareFunc) (Callable, error) {
-	fd, err := liblpc.NewConnFd2(addr.Version, addr.Sockaddr)
-	if err != nil {
-		return nil, err
-	}
-	stream := liblpc.NewBufferedClientStream(this.ioLoop, int(fd), this.genericRead)
-	pCall := this.newCallable(stream, userData, m)
-	stream.SetOnConnect(func(sw liblpc.StreamWriter, err error) {
-		if pCall.readyCb != nil {
-			pCall.readyCb(pCall, err)
-		}
-		if err != nil {
-			std.CloseIgnoreErr(pCall)
-		}
-	})
-	stream.SetOnClose(func(sw liblpc.StreamWriter, err error) {
-		if pCall.closeCb != nil {
-			pCall.closeCb(pCall, err)
-		}
-		std.CloseIgnoreErr(pCall)
-	})
-
-	return pCall, nil
-}
-
 const kMaxRpcMsgBodyLen = 1024 * 1024 * 32
 
-func (this *RPC) genericRead(sw liblpc.StreamWriter, buf std.ReadableBuffer) {
+func (this *coreImpl) NotifyCallableRead(call Callable, buf std.ReadableBuffer) {
 	for {
 		rawMsg, err := decodeRpcMsg(buf, kMaxRpcMsgBodyLen)
 		if err != nil {
 			break
 		}
-		isReq := rawMsg.Type == rpcReqMsg
-		call := sw.GetUserData().(Callable)
+		isReq := rawMsg.Type == ReqMsg
 		call.NotifyTimeWheel()
 		if isReq {
-			go this.handleReq(call, sw, rawMsg)
+			go this.handleReq(call, rawMsg)
 		} else {
 			this.handleAck(rawMsg)
 		}
 	}
 }
 
-var gRpcSerialization = std.MsgPackSerialization
+var errRpcFuncNotFound = errors.New("core func not found")
 
-var errRpcFuncNotFound = errors.New("rpc func not found")
-
-//func (this *RPC) lastWriteFn(outMsg *rpcRawMsg, ctx Context) {
-//	err := ctx.Error()
-//	if err != nil {
-//		outMsg.SetError(err)
-//	} else {
-//		outBytes, err := gRpcSerialization.Marshal(ctx.Response())
-//		if err != nil {
-//			outMsg.SetError(err)
-//		} else {
-//			outMsg.Data = outBytes
-//		}
-//	}
-//}
-
-func (this *RPC) execWithMiddleware(c Context) {
+func (this *coreImpl) execWithMiddleware(c Context) {
 	ctx := c.(*contextImpl)
 	fn := this.getFunc(ctx.reqMsg.MethodName)
 	var fnProxy HandleFunc = nil
 	if fn != nil {
-		ctx.setRequestType(fn.inParamType)
-		ctx.setResponseType(fn.outParamType)
+		ctx.SetRequestType(fn.inParamType)
+		ctx.SetResponseType(fn.outParamType)
 		inParam, err := fn.decodeInParam(ctx.reqMsg.Data)
 		if err != nil {
 			ctx.SetError(err)
@@ -263,13 +191,13 @@ func (this *RPC) execWithMiddleware(c Context) {
 	fnProxy(ctx)
 }
 
-func (this *RPC) handleReq(cli Callable, sw liblpc.StreamWriter, inMsg *rpcRawMsg) {
-	ctx := this.grabCtx()
+func (this *coreImpl) handleReq(cli Callable, inMsg *RawMsg) {
+	ctx := this.GrabContext()
 	defer func() {
-		ctx.reset()
-		this.releaseCtx(ctx)
+		ctx.Reset()
+		this.ReleaseContext(ctx)
 	}()
-	ctx.init(sw, cli, inMsg)
+	ctx.Init(cli, inMsg)
 	//
 	proxy := this.execWithMiddleware
 	if this.preUseMiddleware.Len() != 0 {
@@ -277,21 +205,29 @@ func (this *RPC) handleReq(cli Callable, sw liblpc.StreamWriter, inMsg *rpcRawMs
 	}
 	proxy(ctx)
 	//
-	outMsg, err := ctx.buildOutMsg()
+	outMsg, err := ctx.BuildOutMsg()
 	if err != nil {
-		log.Printf("RPC handle REQ Id -> %s,build output msg error -> %v\n", inMsg.Id, err)
+		log.Printf("coreImpl handle REQ Id -> %s,build output msg error -> %v\n", inMsg.Id, err)
 		return // build rpcMsg failed
 	}
 	sendBytes, err := encodeRpcMsg(outMsg)
 	if err != nil {
-		log.Printf("RPC handle REQ Id -> %s,marshal output msg error -> %v\n", inMsg.Id, err)
+		log.Printf("coreImpl handle REQ Id -> %s,marshal output msg error -> %v\n", inMsg.Id, err)
 		return // encode rpcMsg failed
 	}
 	if writer := ctx.Writer(); writer != nil {
-		writer.Write(sendBytes, false)
+		writer.Write(ctx, sendBytes, false)
 	}
 }
 
-func (this *RPC) handleAck(inMsg *rpcRawMsg) {
+func (this *coreImpl) handleAck(inMsg *RawMsg) {
 	this.promiseGroup.DonePromise(std.PromiseId(inMsg.Id), inMsg.GetError(), inMsg)
+}
+
+func (this *coreImpl) BuildChain(h HandleFunc) HandleFunc {
+	return this.buildChain(h)
+}
+
+func (this *coreImpl) BuildPreUsedChain(h HandleFunc) HandleFunc {
+	return this.preUseMiddleware.buildChain(h)
 }

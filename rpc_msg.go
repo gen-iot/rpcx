@@ -19,34 +19,34 @@ const kMinMsgLen = kDataOffset
 
 var ErrNeedMore = errors.New("codec want read more bytes")
 
-type rpcMsgType int
+type MsgType int
 
 const (
-	rpcReqMsg rpcMsgType = iota
-	rpcAckMsg
+	ReqMsg MsgType = iota
+	AckMsg
 )
 
-type rpcRawMsg struct {
+type RawMsg struct {
 	Id         string            `json:"msgId"`
 	MethodName string            `json:"methodName"`
 	Headers    map[string]string `json:"headers"`
-	Type       rpcMsgType        `json:"type"` // req or ack
+	Type       MsgType           `json:"type"` // req or ack
 	Err        *string           `json:"err"`  // fast path for ack error
 	Data       []byte            `json:"data"` // req = param
 }
 
-func (this *rpcRawMsg) GetError() error {
+func (this *RawMsg) GetError() error {
 	if this.Err == nil {
 		return nil
 	}
 	return errors.New(*this.Err)
 }
 
-func (this *rpcRawMsg) SetErrorString(es string) {
+func (this *RawMsg) SetErrorString(es string) {
 	this.Err = &es
 }
 
-func (this *rpcRawMsg) SetError(err error) {
+func (this *RawMsg) SetError(err error) {
 	if err == nil {
 		return
 	}
@@ -54,11 +54,11 @@ func (this *rpcRawMsg) SetError(err error) {
 	this.Err = &es
 }
 
-func (this *rpcRawMsg) BindData(v interface{}) error {
+func (this *RawMsg) BindData(v interface{}) error {
 	return gRpcSerialization.UnMarshal(this.Data, v)
 }
 
-func (this *rpcRawMsg) SetData(v interface{}) error {
+func (this *RawMsg) SetData(v interface{}) error {
 	if v == nil {
 		this.Data = nil
 		return nil
@@ -71,7 +71,7 @@ func (this *rpcRawMsg) SetData(v interface{}) error {
 	return nil
 }
 
-func decodeRpcMsg(buf std.ReadableBuffer, maxBodyLen int) (*rpcRawMsg, error) {
+func decodeRpcMsg(buf std.ReadableBuffer, maxBodyLen int) (*RawMsg, error) {
 	std.Assert(maxBodyLen > 0, "maxBodyLen must > 0")
 	for {
 		if buf.ReadableLen() < kMinMsgLen {
@@ -96,7 +96,7 @@ func decodeRpcMsg(buf std.ReadableBuffer, maxBodyLen int) (*rpcRawMsg, error) {
 		}
 		buf.PopN(kDataOffset)
 		data := buf.ReadN(int(dataLen))
-		outMsg := new(rpcRawMsg)
+		outMsg := new(RawMsg)
 		err := gRpcSerialization.UnMarshal(data, outMsg)
 		if err != nil {
 			log.Println("unmarshal rpcx msg failed -> ", err)
@@ -106,7 +106,7 @@ func decodeRpcMsg(buf std.ReadableBuffer, maxBodyLen int) (*rpcRawMsg, error) {
 	}
 }
 
-func encodeRpcMsg(msg *rpcRawMsg) ([]byte, error) {
+func encodeRpcMsg(msg *RawMsg) ([]byte, error) {
 	std.Assert(len(msg.Id) == 32, "msgId.Len != 32")
 	buffer := std.NewByteBuffer()
 	datas, err := gRpcSerialization.Marshal(msg)

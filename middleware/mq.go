@@ -1,21 +1,19 @@
 package middleware
 
 import (
-	"github.com/gen-iot/liblpc"
-	"github.com/gen-iot/rpcx"
+	"github.com/gen-iot/rpcx/v2"
 	"github.com/gen-iot/std"
 	"github.com/pkg/errors"
 	"sync"
 )
 
-// todo should reuse it
 type fakeDataWriter struct {
 	sendF  MqSendFunc
 	target string
 	reply  string
 }
 
-func (this *fakeDataWriter) Write(data []byte, inLoop bool) {
+func (this *fakeDataWriter) Write(ctx rpcx.Context, data []byte, inLoop bool) {
 	this.sendF(this.target, this.reply, data)
 }
 
@@ -34,38 +32,24 @@ var __fdwPool = sync.Pool{
 type MqSendFunc func(targetTopic, replyTopic string, msg []byte)
 
 type Mq struct {
-	rpc          *rpcx.RPC
-	pipeWriter   *liblpc.Stream
-	pipeCallable rpcx.Callable
-	mqSend       MqSendFunc
+	core   rpcx.Core
+	vCall  *rpcx.VirtualCallable
+	mqSend MqSendFunc
 }
 
-func NewMq(rpc *rpcx.RPC, mqSend MqSendFunc) (*Mq, error) {
-	std.Assert(rpc != nil, "rpc is required")
+func NewMq(core rpcx.Core, mqSend MqSendFunc) *Mq {
+	std.Assert(core != nil, "rpc is required")
 	std.Assert(mqSend != nil, "mqSend is required")
 	this := &Mq{
-		rpc:    rpc,
+		core:   core,
 		mqSend: mqSend,
 	}
-	fds, err := liblpc.MakeIpcSockpair(true)
-	if err != nil {
-		return nil, err
-	}
-	this.pipeWriter = liblpc.NewConnStream(rpc.Loop().(*liblpc.IOEvtLoop), fds[0], nil)
-	this.pipeWriter.Start()
-	this.pipeCallable = rpc.NewConnCallable(fds[1], nil)
-	this.pipeCallable.Start()
-	return this, nil
-}
-
-func (this *Mq) Close() error {
-	std.CloseIgnoreErr(this.pipeWriter)
-	std.CloseIgnoreErr(this.pipeCallable)
-	return nil
+	this.vCall = rpcx.NewVirtualCallable(core, nil)
+	return this
 }
 
 func (this *Mq) OnReceive(msg []byte) {
-	this.pipeWriter.Write(msg, false)
+	this.vCall.MockReadData(msg)
 }
 
 func (this *Mq) Middleware() rpcx.MiddlewareFunc {

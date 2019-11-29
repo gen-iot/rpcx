@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/gen-iot/liblpc"
-	"github.com/gen-iot/rpcx"
-	"github.com/gen-iot/rpcx/middleware"
+	"github.com/gen-iot/rpcx/v2"
+	"github.com/gen-iot/rpcx/v2/middleware"
 	"github.com/gen-iot/std"
 	"testing"
 	"time"
@@ -46,11 +46,11 @@ func fakeMq(ctx context.Context, mq *middleware.Mq) {
 	}
 }
 
-func fakeCall(rpc *rpcx.RPC, cancelFunc func()) {
+func fakeCall(core rpcx.Core, cancelFunc func()) {
 	defer cancelFunc()
 	sockFd, err := liblpc.NewTcpSocketFd(4, true, true)
 	std.AssertError(err, "new sock fd")
-	callable := rpc.NewConnCallable(int(sockFd), nil)
+	callable := rpcx.NewConnStreamCallable(core, int(sockFd), nil)
 	callable.Start()
 	out := new(string)
 	_, err = callable.Call6(time.Second*5, "hello", middleware.MqMakeHeader("abc", "xyz"), "client msg", out)

@@ -1,13 +1,13 @@
 package examples
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/gen-iot/liblpc"
-	"github.com/gen-iot/rpcx"
-	"github.com/gen-iot/rpcx/middleware"
+	"github.com/gen-iot/rpcx/v2"
+	"github.com/gen-iot/rpcx/v2/middleware"
 	"github.com/gen-iot/std"
-	"sync"
 	"testing"
 	"time"
 )
@@ -34,34 +34,35 @@ func sumFn(ctx rpcx.Context) (string, error) {
 }
 
 func TestCall(t *testing.T) {
-	rpc, err := rpcx.New()
+	core, err := rpcx.New()
 	std.AssertError(err, "rpc new")
+	defer std.CloseIgnoreErr(core)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	const rpcFnName = "Sum"
-	rpc.Use(func(next rpcx.HandleFunc) rpcx.HandleFunc {
+	core.Use(func(next rpcx.HandleFunc) rpcx.HandleFunc {
 		return func(ctx rpcx.Context) {
 			fmt.Println("tag1")
 			next(ctx)
 			fmt.Println("tag2")
 		}
 	}, middleware.ValidateStruct(middleware.ValidateInOut, std.NewValidator(std.LANG_EN)))
-	rpc.RegFuncWithName(rpcFnName, sumFn)
-	rpc.Start(nil)
+	core.RegFuncWithName(rpcFnName, sumFn)
+
 	addr := "127.0.0.1:8848"
 	lfd, err := liblpc.NewListenerFd(addr, 128, true, true)
 	std.AssertError(err, "new listener fd")
-	l := liblpc.NewListener(rpc.Loop(), int(lfd), func(ln *liblpc.Listener, newFd int, err error) {
+	l := liblpc.NewListener(core.Loop(), int(lfd), func(ln *liblpc.Listener, newFd int, err error) {
 		std.AssertError(err, "accept err")
-		call := rpc.NewConnCallable(newFd, nil)
+		call := rpcx.NewConnStreamCallable(core, newFd, nil)
 		call.Start()
 	})
 	l.Start()
-	wg := new(sync.WaitGroup)
-	wg.Add(1)
 	go func() {
-		defer wg.Done()
+		defer cancel()
 		sockAddr, err := liblpc.ResolveTcpAddr(addr)
 		std.AssertError(err, "resolve addr err")
-		call, err := rpc.NewClientCallable(sockAddr, nil)
+		call, err := rpcx.NewClientStreamCallable(core, sockAddr, nil)
 		std.AssertError(err, "new client callable")
 		callable := rpcx.NewSignalCallable(call)
 		callable.Start()
@@ -79,8 +80,5 @@ func TestCall(t *testing.T) {
 		<-callable.CloseSignal()
 		fmt.Println("conn callable closed")
 	}()
-	wg.Wait()
-	std.CloseIgnoreErr(l)
-	std.CloseIgnoreErr(rpc)
-
+	core.Run(ctx)
 }
