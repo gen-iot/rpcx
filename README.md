@@ -20,14 +20,31 @@ Easy to use and developer friendly **RPC library**
 
 ## Usage
 
+
+```bash
+# install rpcx v2
+go get -u github.com/gen-iot/rpcx/v2@latest
+```
+
 ```go
-import "github.com/gen-iot/rpcx"
+// import 
+import "github.com/gen-iot/rpcx/v2"
 ```
 
 ## Overview
 
 - **Developer friendly**
-- **Middlewares**: dump,proxy,recover,validate...
+- **Middlewares**: dump,mq_proxy,recover,validate...
+
+## Middlewares
+
+|     Name     |                       Desciption                       |
+| :----------: | :----------------------------------------------------: |
+|     dump     |             dump request/response content              |
+|   mq_proxy   | transfer requst/response<br> over custom message queue |
+|   recover    |                     recover panic                      |
+|   validate   |             validate request/response data             |
+| req_not_nill |        discard  request which req param is nil         |
 
 ## Getting Started
 
@@ -56,44 +73,44 @@ func Function(ctx rpcx.Context) (out OutType,err error)
 func Function(ctx rpcx.Context, in InType)(err error)
 ```
 
-### Create RPC
+### Create Core
 
 ```go
-rpc, err := rpcx.New()
+core, err := rpcx.New()
 ```
 
-### Close RPC
+### Close Core
 
 ```go
-err := rpc.Close()
+err := core.Close()
 ```
 
 ### Register RPC Function
 
 ```go
-rpc, err := rpcx.New()
+core, err := rpcx.New()
 std.AssertError(err, "new rpc")
-rpc.RegFuncWithName(
+core.RegFuncWithName(
     "hello", // manual specified func name
     func(ctx rpcx.Context, msg string) (string, error) {
         return "hello from server", nil
     })
 ```
 
-### Connect To RPC
+### Connect To Remote Core
 
 ```go
 sockAddr, err := liblpc.ResolveTcpAddr("127.0.0.1")
 std.AssertError(err,"resolve addr")
-callable := rpc.NewClientCallable(sockAddr,nil)
+callable := rpcx.NewClientStreamCallable(core, sockAddr, nil)
 callable.Start()
 ```
 
-### Add Exist Conn To RPC
+### Add Exist Conn To Core
 
 ```go
 // `fd` must be a valid file descriptor
-callable := rpc.NewConnCallable(fd, nil)
+callable := rpcx.NewConnStreamCallable(core,fd, nil)
 callable.Start()
 ```
 
@@ -119,33 +136,33 @@ fmt.Println("result:",*out)
 
 **All Call[0-6] support Timeout And Middlewares**
 
-|Function|Header|In|Out|
-|:--:|:--:|:--:|:--:|
-|Call    |     |   |  |
-|Call0 | ✅ | |  |
-|Call1 |  |  ✅ |  |
-|Call2 |✅  | ✅ |  |
-|Call3 |  |  |  ✅ |
-|Call4 |  ✅ |  |  ✅ |
-|Call5 |  | ✅ |  ✅|
-|Call6 |  ✅|  ✅| ✅ |
+| Function | Header |  In   |  Out  |
+| :------: | :----: | :---: | :---: |
+|   Call   |        |       |       |
+|  Call0   |   ✅    |       |       |
+|  Call1   |        |   ✅   |       |
+|  Call2   |   ✅    |   ✅   |       |
+|  Call3   |        |       |   ✅   |
+|  Call4   |   ✅    |       |   ✅   |
+|  Call5   |        |   ✅   |   ✅   |
+|  Call6   |   ✅    |   ✅   |   ✅   |
 
 ## Middleware
 
-middlewares works like `AOP` as we know in `java`.
+middlewares works like `AOP concept` as we know in `Java`.
 
 📌**Import middlewares before use**
 ```go
-import "github.com/gen-iot/rpcx/middleware"
+import "github.com/gen-iot/rpcx/v2/middleware"
 ```
 ### RPC Core
 
 📌**middlewares apply on rpc core will affect whole rpc context**
 
 ```go
-rpc, err := rpcx.New()
-std.AssertError(err, "new rpc")
-rpc.Use(
+core, err := rpcx.New()
+std.AssertError(err, "new rpc core")
+core.Use(
     middleware.Recover(true), // recover 
     middleware.ValidateStruct( // validator
         middleware.ValidateInOut,
@@ -156,9 +173,9 @@ rpc.Use(
 ### RPC Functions
 
 ```go
-rpc, err := rpcx.New()
+core, err := rpcx.New()
 std.AssertError(err, "new rpc")
-rpc.RegFuncWithName("hello",
+core.RegFuncWithName("hello",
     func(ctx rpcx.Context, msg string) (string, error) {
         return "hello from server", nil
     },
@@ -170,17 +187,31 @@ rpc.RegFuncWithName("hello",
 
 ### Callable
 
+simple call
+
 ```go
 err := callable.Call("hello",
     middleware.Recover(true), // recover 
 )
 ```
 
+simple call with headers
+
+```go
+ackHeader, err := callable.Call1("helloWithHeader",&RpcMsgHeader{
+                    "key1":"value1",
+                    "key2":"value2",
+                },
+    middleware.Recover(true), // recover 
+)
+fmt.Println("ack header->",ackHeader)
+```
+
 ## More Example
 
-try [examples](https://github.com/gen-iot/rpcx/tree/master/examples)
+try [examples](https://github.com/gen-iot/rpcx/tree/v2/examples)
 
 
 ## License
 
-Released under the [MIT License](https://github.com/gen-iot/rpcx/blob/master/License)
+Released under the [MIT License](https://github.com/gen-iot/rpcx/blob/v2/License)
