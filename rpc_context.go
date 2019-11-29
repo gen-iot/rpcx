@@ -76,6 +76,11 @@ type contextImpl struct {
 }
 
 func (this *contextImpl) Reset() {
+	//
+	for i := len(this.deferFuncList) - 1; i >= 0; i-- {
+		this.deferFuncList[i]()
+	}
+	//
 	this.call = nil
 	this.in = nil
 	this.out = nil
@@ -85,9 +90,6 @@ func (this *contextImpl) Reset() {
 	this.localFnDesc = 0
 	this.writer = nil
 	this.SetUserData(nil)
-	for i := len(this.deferFuncList) - 1; i >= 0; i-- {
-		this.deferFuncList[i]()
-	}
 	this.deferFuncList = this.deferFuncList[:0]
 }
 
