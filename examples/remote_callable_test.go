@@ -1,6 +1,7 @@
 package examples
 
 import (
+	"context"
 	"github.com/gen-iot/liblpc"
 	"github.com/gen-iot/rpcx/v2"
 	"github.com/gen-iot/std"
@@ -8,7 +9,8 @@ import (
 	"time"
 )
 
-func mockRemoteRPC(core rpcx.Core, t *testing.T) {
+func mockRemoteRPC(core rpcx.Core, t *testing.T, cancelFunc context.CancelFunc) {
+	defer cancelFunc()
 	sockAddr, err := liblpc.ResolveTcpAddr("127.0.0.1:12345")
 	std.AssertError(err, "mockRemoteRPC resolve addr")
 	callable, err := rpcx.NewClientStreamCallable(core, sockAddr, nil)
@@ -18,10 +20,10 @@ func mockRemoteRPC(core rpcx.Core, t *testing.T) {
 	err = callable.Call3(time.Second*5, "hello", out)
 	std.AssertError(err, "call failed")
 	t.Log("remote ack:", *out, ",err=", err)
-	std.CloseIgnoreErr(core)
+
 }
 
-func startAcceptor(core rpcx.Core, t *testing.T) *liblpc.Listener {
+func startAcceptor(core rpcx.Core, t *testing.T) {
 	lfd, err := liblpc.NewListenerFd(
 		"127.0.0.1:12345",
 		1024,
@@ -34,17 +36,18 @@ func startAcceptor(core rpcx.Core, t *testing.T) *liblpc.Listener {
 			callable.Start()
 		})
 	l.Start()
-	return l
 }
 
 func TestAcceptRemote(t *testing.T) {
-	rpc, err := rpcx.New()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	core, err := rpcx.New()
 	std.AssertError(err, "new rpc")
-	rpc.RegFuncWithName("hello", func(ctx rpcx.Context) (string, error) {
+	defer std.CloseIgnoreErr(core)
+	core.RegFuncWithName("hello", func(ctx rpcx.Context) (string, error) {
 		return "hello world", nil
 	})
-	listener := startAcceptor(rpc, t)
-	defer std.CloseIgnoreErr(listener)
-	go mockRemoteRPC(rpc, t)
-	rpc.Run(nil)
+	startAcceptor(core, t)
+	go mockRemoteRPC(core, t, cancel)
+	core.Run(ctx)
 }

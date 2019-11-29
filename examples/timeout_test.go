@@ -13,10 +13,13 @@ import (
 )
 
 func TestCallTimeout(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	wheel := liblpc.NewTimeWheel(2, 4)
-	go wheel.Execute(context.Background())
+	go wheel.Execute(ctx)
 	core, err := rpcx.New()
 	std.AssertError(err, "core new")
+	defer std.CloseIgnoreErr(core)
 	const rpcFnName = "Sum"
 	core.Use(func(next rpcx.HandleFunc) rpcx.HandleFunc {
 		return func(ctx rpcx.Context) {
@@ -26,7 +29,7 @@ func TestCallTimeout(t *testing.T) {
 		}
 	}, middleware.ValidateStruct(middleware.ValidateInOut, std.NewValidator(std.LANG_EN)))
 	core.RegFuncWithName(rpcFnName, sumFn)
-	core.Start(nil)
+
 	addr := "127.0.0.1:8848"
 	lfd, err := liblpc.NewListenerFd(addr, 128, true, true)
 	std.AssertError(err, "new listener fd")
@@ -39,9 +42,8 @@ func TestCallTimeout(t *testing.T) {
 	})
 	l.Start()
 	wg := new(sync.WaitGroup)
-	wg.Add(1)
 	go func() {
-		defer wg.Done()
+		defer cancel()
 		sockAddr, err := liblpc.ResolveTcpAddr(addr)
 		std.AssertError(err, "resolve addr err")
 		call, err := rpcx.NewClientStreamCallable(core, sockAddr, nil)
@@ -62,4 +64,5 @@ func TestCallTimeout(t *testing.T) {
 	}()
 
 	wg.Wait()
+	core.Run(ctx)
 }

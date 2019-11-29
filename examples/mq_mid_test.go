@@ -66,8 +66,7 @@ func TestMq(t *testing.T) {
 	std.AssertError(err, "new rpc")
 	defer std.CloseIgnoreErr(rpc)
 	//
-	mq, err := middleware.NewMq(rpc, wrapMqSend(ch1))
-	std.AssertError(err, "new mq mid")
+	mq := middleware.NewMq(rpc, wrapMqSend(ch1))
 	//
 	rpc.Use(mq.Middleware())
 	//
