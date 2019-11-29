@@ -138,19 +138,6 @@ func (this *RPC) newCallable(stream *liblpc.BufferedStream, userData interface{}
 	return s
 }
 
-func (this *RPC) callableClosed(sw liblpc.StreamWriter, err error) {
-	log.Println("CALLABLE CLOSED ERR=", err)
-	std.CloseIgnoreErr(sw)
-	udata := sw.GetUserData()
-	if udata == nil {
-		return
-	}
-	if call, ok := udata.(Callable); ok {
-		std.CloseIgnoreErr(call)
-	}
-	return
-}
-
 func (this *RPC) NewConnCallable(fd int, userData interface{}, m ...MiddlewareFunc) Callable {
 	stream := liblpc.NewBufferedConnStream(this.ioLoop, fd, this.genericRead)
 	pCall := this.newCallable(stream, userData, m)
@@ -168,7 +155,6 @@ func (this *RPC) NewConnCallable(fd int, userData interface{}, m ...MiddlewareFu
 		}
 		std.CloseIgnoreErr(pCall)
 	})
-	stream.SetOnClose(this.callableClosed)
 	return pCall
 }
 
@@ -198,7 +184,6 @@ func (this *RPC) NewClientCallable(
 		}
 		std.CloseIgnoreErr(pCall)
 	})
-	stream.SetOnClose(this.callableClosed)
 	return pCall, nil
 }
 
