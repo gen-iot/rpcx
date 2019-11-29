@@ -12,7 +12,6 @@ import (
 	"sync/atomic"
 )
 
-//noinspection GoUnusedGlobalVariable
 var Debug = true
 var gRpcSerialization = std.MsgPackSerialization
 
