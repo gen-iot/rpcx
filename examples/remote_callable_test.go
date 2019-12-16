@@ -2,7 +2,7 @@ package examples
 
 import (
 	"context"
-	"github.com/gen-iot/liblpc"
+	"github.com/gen-iot/liblpc/v2"
 	"github.com/gen-iot/rpcx/v2"
 	"github.com/gen-iot/std"
 	"testing"

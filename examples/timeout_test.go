@@ -3,7 +3,7 @@ package examples
 import (
 	"context"
 	"fmt"
-	"github.com/gen-iot/liblpc"
+	"github.com/gen-iot/liblpc/v2"
 	"github.com/gen-iot/rpcx/v2"
 	"github.com/gen-iot/rpcx/v2/middleware"
 	"github.com/gen-iot/std"
