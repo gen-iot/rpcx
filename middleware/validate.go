@@ -3,7 +3,7 @@ package middleware
 import (
 	"github.com/gen-iot/rpcx/v2"
 	"github.com/gen-iot/std"
-	"log"
+	"github.com/pkg/errors"
 	"reflect"
 )
 
@@ -24,7 +24,6 @@ func ValidateStruct(flag ValidateFlag, v std.Validator) rpcx.MiddlewareFunc {
 			if flag&ValidateIn != 0 {
 				err := ctx.Error()
 				if err != nil {
-					log.Println("validate req abort ,caused by:", err)
 					return
 				}
 				if ctx.LocalFuncDesc()&rpcx.ReqHasData != 0 {
@@ -35,8 +34,7 @@ func ValidateStruct(flag ValidateFlag, v std.Validator) rpcx.MiddlewareFunc {
 					if reqT.Kind() == reflect.Struct {
 						err = v.Validate(ctx.Request())
 						if err != nil {
-							log.Println("validate req err")
-							ctx.SetError(err)
+							ctx.SetError(errors.Wrap(err, "validate req err"))
 							return
 						}
 					}
@@ -50,7 +48,6 @@ func ValidateStruct(flag ValidateFlag, v std.Validator) rpcx.MiddlewareFunc {
 			}
 			err := ctx.Error()
 			if err != nil {
-				log.Println("validate rsp abort ,caused by:", err)
 				return
 			}
 			if ctx.LocalFuncDesc()&rpcx.RspHasData != 0 {
@@ -63,8 +60,7 @@ func ValidateStruct(flag ValidateFlag, v std.Validator) rpcx.MiddlewareFunc {
 				}
 				err = v.Validate(ctx.Response())
 				if err != nil {
-					log.Println("validate rsp err")
-					ctx.SetError(err)
+					ctx.SetError(errors.Wrap(err, "validate rsp err"))
 					return
 				}
 			}
