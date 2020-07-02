@@ -17,7 +17,8 @@ func RequestNotNil() rpcx.MiddlewareFunc {
 			switch k {
 			case reflect.Invalid:
 				goto error
-			case reflect.Chan, reflect.Func, reflect.Map, reflect.Ptr, reflect.UnsafePointer, reflect.Interface, reflect.Slice:
+			case reflect.Chan, reflect.Func, reflect.Map, reflect.Ptr,
+				reflect.UnsafePointer, reflect.Interface, reflect.Slice:
 				if reqV.IsNil() {
 					goto error
 				}
