@@ -42,13 +42,13 @@ func TestRequestNotNil(t *testing.T) {
 	rpc, err := rpcx.New()
 	std.AssertError(err, "new rpcx")
 	defer std.CloseIgnoreErr(rpc)
-	rpc.Start()
+	rpc.Start(nil)
 
 	rpc.RegFunc(funWithBasicReqRsp, RequestNotNil())
 	rpc.RegFunc(funWithStringRequest, RequestNotNil())
 	rpc.RegFunc(funWithStringPtrRequest, RequestNotNil())
 
-	call := rpc.NewConnCallable(fds[0], nil)
+	call := rpcx.NewConnStreamCallable(rpc, fds[0], nil)
 	call.Start()
 
 	wg := &sync.WaitGroup{}
@@ -59,17 +59,17 @@ func TestRequestNotNil(t *testing.T) {
 		rpc, err := rpcx.New()
 		std.AssertError(err, "new rpcx")
 		defer std.CloseIgnoreErr(rpc)
-		rpc.Start()
-		callable := rpc.NewConnCallable(fd, nil)
+		rpc.Start(nil)
+		callable := rpcx.NewConnStreamCallable(rpc, fd, nil)
 		cliCall := rpcx.NewSignalCallable(callable)
 		cliCall.Start()
 		<-cliCall.ReadySignal()
 		//test basic req &rsp
 		rsp1 := new(fun1Rsp)
-		err = callable.Call1(time.Second*5, "funWithBasicReqRsp", &fun1Req{A: 10, B: 100}, rsp1)
+		err = callable.Call5(time.Second*5, "funWithBasicReqRsp", &fun1Req{A: 10, B: 100}, rsp1)
 		std.AssertError(err, "call funWithBasicReqRsp error")
 		std.Assert(rsp1.Sum == 10+100, "result error")
-		err = callable.Call1(time.Second*5, "funWithBasicReqRsp", nil, rsp1)
+		err = callable.Call5(time.Second*5, "funWithBasicReqRsp", nil, rsp1)
 		std.Assert(err != nil, "should be error")
 
 		//test string req
