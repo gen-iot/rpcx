@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"fmt"
 	"github.com/gen-iot/liblpc/v2"
 	"github.com/gen-iot/rpcx/v2"
@@ -36,19 +37,22 @@ func funWithStringPtrRequest(ctx rpcx.Context, req *string) error {
 }
 
 func TestRequestNotNil(t *testing.T) {
+	fncLifeContext, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	fds, err := liblpc.MakeIpcSockpair(true)
 	std.AssertError(err, "socketPair error")
 
-	rpc, err := rpcx.New()
+	core, err := rpcx.New()
 	std.AssertError(err, "new rpcx")
-	defer std.CloseIgnoreErr(rpc)
-	rpc.Start(nil)
+	defer std.CloseIgnoreErr(core)
+	core.PreUse(RequestNotNil())
+	core.Start(fncLifeContext)
 
-	rpc.RegFunc(funWithBasicReqRsp, RequestNotNil())
-	rpc.RegFunc(funWithStringRequest, RequestNotNil())
-	rpc.RegFunc(funWithStringPtrRequest, RequestNotNil())
+	core.RegFunc(funWithBasicReqRsp)
+	core.RegFunc(funWithStringRequest)
+	core.RegFunc(funWithStringPtrRequest)
 
-	call := rpcx.NewConnStreamCallable(rpc, fds[0], nil)
+	call := rpcx.NewConnStreamCallable(core, fds[0], nil)
 	call.Start()
 
 	wg := &sync.WaitGroup{}
@@ -56,11 +60,11 @@ func TestRequestNotNil(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		fd := fds[1]
-		rpc, err := rpcx.New()
+		core2, err := rpcx.New()
 		std.AssertError(err, "new rpcx")
-		defer std.CloseIgnoreErr(rpc)
-		rpc.Start(nil)
-		callable := rpcx.NewConnStreamCallable(rpc, fd, nil)
+		defer std.CloseIgnoreErr(core2)
+		core2.Start(fncLifeContext)
+		callable := rpcx.NewConnStreamCallable(core2, fd, nil)
 		cliCall := rpcx.NewSignalCallable(callable)
 		cliCall.Start()
 		<-cliCall.ReadySignal()
